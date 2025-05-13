@@ -7,17 +7,32 @@ export function ModeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
+    // On first load, check if user has a preference stored or prefers dark mode
+    const isDark = 
+      localStorage.getItem("theme") === "dark" || 
+      (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      
     setTheme(isDark ? "dark" : "light");
+    
+    // Apply the theme class to document
+    applyTheme(isDark ? "dark" : "light");
   }, []);
 
   useEffect(() => {
-    if (theme === "dark") {
+    // Store user preference whenever theme changes
+    localStorage.setItem("theme", theme);
+    
+    // Apply the theme class to document
+    applyTheme(theme);
+  }, [theme]);
+  
+  const applyTheme = (newTheme: "light" | "dark") => {
+    if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [theme]);
+  };
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
