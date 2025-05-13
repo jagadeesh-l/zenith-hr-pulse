@@ -126,4 +126,15 @@
   .hr-sidebar-trigger {
     @apply fixed z-40 top-1/2 -translate-y-1/2 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 rounded-l-md opacity-60 hover:opacity-100 transition-all duration-300;
   }
+  
+  /* Enhanced dark mode styles for inputs and textboxes */
+  .dark input, 
+  .dark textarea {
+    @apply border-blue-500/30 bg-gray-800/50;
+  }
+  
+  /* Enhanced visibility for post input in dark mode */
+  .dark .bg-muted\/50 {
+    @apply border border-blue-500/30 bg-gray-800/50;
+  }
 }

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,30 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loginClicked, setLoginClicked] = useState(false);
+  const [loginCompleted, setLoginCompleted] = useState(false);
   const navigate = useNavigate();
+  
+  const introVideoRef = useRef<HTMLVideoElement>(null);
+  const loginVideoRef = useRef<HTMLVideoElement>(null);
+  
+  // Monitor the login video's completion
+  useEffect(() => {
+    const loginVideo = loginVideoRef.current;
+    
+    if (!loginVideo) return;
+    
+    const handleLoginVideoEnd = () => {
+      setLoginCompleted(true);
+      navigate("/dashboard");
+    };
+    
+    loginVideo.addEventListener('ended', handleLoginVideoEnd);
+    
+    return () => {
+      loginVideo.removeEventListener('ended', handleLoginVideoEnd);
+    };
+  }, [navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +54,21 @@ export default function Login() {
       return;
     }
     
-    // In a real app, you would authenticate with your backend here
-    toast.success("Login successful!");
-    navigate("/dashboard");
+    // Set login clicked to start the transition video
+    setLoginClicked(true);
+    
+    // Hide intro video and show login video
+    if (introVideoRef.current) {
+      introVideoRef.current.pause();
+      introVideoRef.current.style.display = 'none';
+    }
+    
+    if (loginVideoRef.current) {
+      loginVideoRef.current.style.display = 'block';
+      loginVideoRef.current.play();
+    }
+    
+    toast.success("Login successful! Redirecting to dashboard...");
   };
 
   const togglePasswordVisibility = () => {
@@ -70,11 +105,37 @@ export default function Login() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left side - Game space */}
-          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gradient-primary mb-4">Future Game Space</h2>
-              <p className="text-muted-foreground">This area will contain an interactive game implemented by the backend team.</p>
-            </div>
+          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden">
+            {/* Intro Video - Always playing until login */}
+            <video 
+              ref={introVideoRef}
+              autoPlay
+              muted
+              loop
+              className="w-full h-full object-cover absolute inset-0"
+              style={{ display: loginClicked ? 'none' : 'block' }}
+            >
+              <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-city-11758-large.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            
+            {/* Login Success Video - Plays after clicking login */}
+            <video 
+              ref={loginVideoRef}
+              muted
+              className="w-full h-full object-cover absolute inset-0"
+              style={{ display: 'none' }}
+            >
+              <source src="https://assets.mixkit.co/videos/preview/mixkit-futuristic-urban-traffic-in-the-city-40837-large.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            
+            {!loginClicked && (
+              <div className="text-center relative z-10">
+                <h2 className="text-2xl font-bold text-gradient-primary mb-4">Future Game Space</h2>
+                <p className="text-muted-foreground">This area will contain an interactive game implemented by the backend team.</p>
+              </div>
+            )}
           </div>
           
           {/* Right side - Login form */}
@@ -143,16 +204,19 @@ export default function Login() {
                   </a>
                 </div>
                 
-                <Button type="submit" className="w-full bg-gradient-hr-primary hover:opacity-90" size="lg">
-                  Sign In
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-hr-primary hover:opacity-90" 
+                  size="lg"
+                  disabled={loginClicked}
+                >
+                  {loginClicked ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Illustration - Removed since we have the game space now */}
     </div>
   );
 }

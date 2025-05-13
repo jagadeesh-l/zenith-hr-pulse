@@ -32,6 +32,11 @@ export function ModeToggle() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+    
+    // Force a repaint to ensure the theme is applied properly
+    document.body.style.display = "none";
+    document.body.offsetHeight; // This line forces a repaint
+    document.body.style.display = "";
   };
 
   const toggleTheme = () => {

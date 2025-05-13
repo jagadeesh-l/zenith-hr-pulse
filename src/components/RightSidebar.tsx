@@ -10,8 +10,6 @@ type RightSidebarProps = {
 
 export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
   const [showTrigger, setShowTrigger] = useState(false);
-  const [showOnHover, setShowOnHover] = useState(false);
-  const hoverTimerRef = useRef<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -22,36 +20,6 @@ export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
-  // Auto-show sidebar when hovering near the edge
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      const { clientX } = event;
-      const windowWidth = window.innerWidth;
-      const triggerZone = 20; // pixels from right edge
-      
-      if (clientX >= windowWidth - triggerZone && !isOpen && !showOnHover) {
-        // Start timer to show sidebar
-        if (!hoverTimerRef.current) {
-          hoverTimerRef.current = window.setTimeout(() => {
-            setShowOnHover(true);
-          }, 300); // Delay before showing
-        }
-      } else if ((clientX < windowWidth - 300 || isOpen) && !sidebarRef.current?.contains(event.target as Node)) {
-        // Clear timer and hide sidebar if moved away
-        if (hoverTimerRef.current) {
-          clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-        }
-        if (showOnHover) {
-          setShowOnHover(false);
-        }
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [isOpen, showOnHover]);
 
   const birthdays = [
     { name: "Sarah Johnson", date: "Today", type: "birthday" as const },
@@ -70,12 +38,10 @@ export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
     { name: "New Product Launch", date: "June 1", type: "event" as const },
   ];
 
-  const actuallyOpen = isOpen || showOnHover;
-
   return (
     <>
       {/* Sidebar trigger button */}
-      {showTrigger && !actuallyOpen && (
+      {showTrigger && !isOpen && (
         <button
           className="hr-sidebar-trigger"
           onClick={onToggle}
@@ -89,7 +55,7 @@ export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
       <div 
         ref={sidebarRef}
         className={`fixed top-0 right-0 z-40 h-full w-72 bg-background border-l border-border transform transition-transform duration-300 ease-in-out pt-16 ${
-          actuallyOpen ? 'translate-x-0' : 'translate-x-full'
+          isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="absolute top-1/2 -left-4 transform -translate-y-1/2">
@@ -134,7 +100,7 @@ export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
       </div>
       
       {/* Overlay for mobile */}
-      {actuallyOpen && (
+      {isOpen && (
         <div 
           className="md:hidden fixed inset-0 bg-black/20 z-30"
           onClick={onToggle}
