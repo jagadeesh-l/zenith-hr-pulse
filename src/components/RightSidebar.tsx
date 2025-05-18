@@ -40,7 +40,7 @@ export function RightSidebar({ isOpen = false, onToggle }: RightSidebarProps) {
 
   return (
     <>
-      {/* Sidebar trigger button */}
+      {/* Sidebar trigger button - only show when closed and scrolled */}
       {showTrigger && !isOpen && (
         <button
           className="hr-sidebar-trigger"

@@ -130,11 +130,11 @@
   /* Enhanced dark mode styles for inputs and textboxes */
   .dark input, 
   .dark textarea {
-    @apply border-blue-500/30 bg-gray-800/50;
+    @apply border-gray-700 bg-gray-800/50 text-white;
   }
   
   /* Enhanced visibility for post input in dark mode */
   .dark .bg-muted\/50 {
-    @apply border border-blue-500/30 bg-gray-800/50;
+    @apply border border-gray-700 bg-gray-800/50;
   }
 }

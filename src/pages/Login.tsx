@@ -14,11 +14,25 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loginClicked, setLoginClicked] = useState(false);
-  const [loginCompleted, setLoginCompleted] = useState(false);
   const navigate = useNavigate();
   
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const loginVideoRef = useRef<HTMLVideoElement>(null);
+  
+  // Set a timeout to navigate to dashboard if video playback takes too long
+  useEffect(() => {
+    if (loginClicked) {
+      // Fallback navigation after 5 seconds if video doesn't complete
+      const fallbackTimer = setTimeout(() => {
+        if (loginVideoRef.current) {
+          console.log("Fallback navigation triggered");
+          navigate("/dashboard");
+        }
+      }, 5000);
+      
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [loginClicked, navigate]);
   
   // Monitor the login video's completion
   useEffect(() => {
@@ -27,14 +41,20 @@ export default function Login() {
     if (!loginVideo) return;
     
     const handleLoginVideoEnd = () => {
-      setLoginCompleted(true);
+      navigate("/dashboard");
+    };
+    
+    const handleLoginVideoError = () => {
+      console.error("Login video playback error");
       navigate("/dashboard");
     };
     
     loginVideo.addEventListener('ended', handleLoginVideoEnd);
+    loginVideo.addEventListener('error', handleLoginVideoError);
     
     return () => {
       loginVideo.removeEventListener('ended', handleLoginVideoEnd);
+      loginVideo.removeEventListener('error', handleLoginVideoError);
     };
   }, [navigate]);
 
@@ -65,7 +85,12 @@ export default function Login() {
     
     if (loginVideoRef.current) {
       loginVideoRef.current.style.display = 'block';
-      loginVideoRef.current.play();
+      
+      // Try to play the video, but if it fails, navigate anyway
+      loginVideoRef.current.play().catch(err => {
+        console.error("Could not play login video:", err);
+        navigate("/dashboard");
+      });
     }
     
     toast.success("Login successful! Redirecting to dashboard...");
@@ -79,7 +104,7 @@ export default function Login() {
   const circles = Array.from({ length: 6 }, (_, i) => i);
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800">
       {/* Background Animation Elements */}
       <div className="absolute inset-0 z-0 opacity-50">
         {circles.map((i) => (
@@ -105,7 +130,7 @@ export default function Login() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left side - Game space */}
-          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden">
+          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30">
             {/* Intro Video - Always playing until login */}
             <video 
               ref={introVideoRef}
@@ -141,11 +166,11 @@ export default function Login() {
           {/* Right side - Login form */}
           <div>
             <div className="mb-10 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary">HR Portal</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">HR Portal</h1>
               <p className="mt-2 text-sm text-muted-foreground">Log in to access the HR management system</p>
             </div>
             
-            <div className="glass-effect rounded-xl p-6 sm:p-8">
+            <div className="glass-effect rounded-xl p-6 sm:p-8 dark:bg-gray-800/30 dark:border-gray-700/30">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <label htmlFor="email" className="block text-sm font-medium">
@@ -157,7 +182,7 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
-                    className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 input-glow"
+                    className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow"
                     required
                   />
                 </div>
@@ -173,7 +198,7 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 input-glow pr-10"
+                      className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow pr-10"
                       required
                     />
                     <button
