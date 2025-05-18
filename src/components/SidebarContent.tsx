@@ -17,16 +17,36 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 type ModuleButtonProps = {
   icon: React.ReactNode;
   label: string;
   active?: boolean;
+  to?: string;
   onClick?: () => void;
 }
 
-const ModuleButton = ({ icon, label, active, onClick }: ModuleButtonProps) => {
-  return (
+const ModuleButton = ({ icon, label, active, to, onClick }: ModuleButtonProps) => {
+  const content = (
+    <>
+      {icon}
+      <span>{label}</span>
+    </>
+  );
+
+  return to ? (
+    <Button
+      variant="ghost"
+      asChild
+      className={cn(
+        "w-full justify-start gap-3 mb-1 px-4",
+        active ? "bg-accent" : "hover:bg-accent/50"
+      )}
+    >
+      <Link to={to}>{content}</Link>
+    </Button>
+  ) : (
     <Button
       variant="ghost"
       onClick={onClick}
@@ -35,8 +55,7 @@ const ModuleButton = ({ icon, label, active, onClick }: ModuleButtonProps) => {
         active ? "bg-accent" : "hover:bg-accent/50"
       )}
     >
-      {icon}
-      <span>{label}</span>
+      {content}
     </Button>
   );
 };
@@ -54,7 +73,8 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
   };
 
   const modules = [
-    { name: 'Directory', icon: <Users size={20} /> },
+    { name: 'Dashboard', icon: <Layout size={20} />, to: '/dashboard' },
+    { name: 'Directory', icon: <Users size={20} />, to: '/directory' },
     { name: 'Leave', icon: <Calendar size={20} /> },
     { name: 'Recruitment', icon: <UserPlus size={20} /> },
     { name: 'Referrals', icon: <Share2 size={20} /> },
@@ -82,6 +102,7 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
             icon={module.icon}
             label={module.name}
             active={activeModule === module.name}
+            to={module.to}
             onClick={() => handleModuleClick(module.name)}
           />
         ))}
