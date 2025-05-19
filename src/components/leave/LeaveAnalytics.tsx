@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,6 +118,9 @@ export const LeaveAnalytics = () => {
       icon: "💡"
     }
   ];
+
+  const totalLeaveDays = leaveTypeTotals.annual + leaveTypeTotals.sick + 
+                       leaveTypeTotals.personal + leaveTypeTotals.unpaid;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -250,7 +252,7 @@ export const LeaveAnalytics = () => {
                           labelKey="name"
                           labelFormatter={(value) => `${value} Leave`}
                           formatter={(value, name) => [
-                            `${value} days (${Math.round((value / (leaveTypeTotals.annual + leaveTypeTotals.sick + leaveTypeTotals.personal + leaveTypeTotals.unpaid)) * 100)}%)`,
+                            `${value} days (${Math.round((value / (totalLeaveDays || 1)) * 100)}%)`,
                             name
                           ]}
                         />

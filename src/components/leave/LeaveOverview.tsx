@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Button } from "@/components/ui/button"; // Added missing Button import
 
 export const LeaveOverview = () => {
   const { toast } = useToast();
@@ -65,7 +66,7 @@ export const LeaveOverview = () => {
                   <span>Used: {leave.used}</span>
                   <span>Total: {leave.total}</span>
                 </div>
-                <Progress value={(leave.used / leave.total) * 100} className="h-2" 
+                <Progress value={(leave.used / (leave.total || 1)) * 100} className="h-2" 
                   style={{ backgroundColor: `${leave.color}30` }}
                 />
                 {leave.remaining < 5 && (
@@ -228,3 +229,4 @@ export const LeaveOverview = () => {
     </div>
   );
 };
+
