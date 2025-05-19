@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Directory from "./pages/Directory";
+import Engagement from "./pages/Engagement";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/directory" element={<Directory />} />
+          <Route path="/engagement" element={<Engagement />} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
