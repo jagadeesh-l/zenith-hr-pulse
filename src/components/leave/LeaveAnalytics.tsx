@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,11 @@ export const LeaveAnalytics = () => {
 
   const totalLeaveDays = leaveTypeTotals.annual + leaveTypeTotals.sick + 
                        leaveTypeTotals.personal + leaveTypeTotals.unpaid;
+
+  // Function to safely calculate percentage with type safety
+  const calculatePercentage = (value: number): number => {
+    return Math.round((value / (totalLeaveDays || 1)) * 100);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -251,10 +257,10 @@ export const LeaveAnalytics = () => {
                         <ChartTooltipContent
                           labelKey="name"
                           labelFormatter={(value) => `${value} Leave`}
-                          formatter={(value, name) => [
-                            `${value} days (${Math.round((value / (totalLeaveDays || 1)) * 100)}%)`,
-                            name
-                          ]}
+                          formatter={(value, name) => {
+                            const percentage = typeof value === 'number' ? calculatePercentage(value) : 0;
+                            return [`${value} days (${percentage}%)`, name];
+                          }}
                         />
                       }
                     />

@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { Button } from "@/components/ui/button"; // Added missing Button import
+import { Button } from "@/components/ui/button";
 
 export const LeaveOverview = () => {
   const { toast } = useToast();
@@ -47,6 +47,15 @@ export const LeaveOverview = () => {
     });
   };
 
+  // Function to safely calculate percentage with type safety
+  const calculateProgressPercentage = (used: number, total: number): number => {
+    if (total <= 0) return 0; // Avoid division by zero
+    return (used / total) * 100;
+  };
+
+  // Calculate total leave days for pie chart percentage
+  const totalLeaveDays = leaveDistribution.reduce((sum, item) => sum + item.value, 0);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -66,7 +75,9 @@ export const LeaveOverview = () => {
                   <span>Used: {leave.used}</span>
                   <span>Total: {leave.total}</span>
                 </div>
-                <Progress value={(leave.used / (leave.total || 1)) * 100} className="h-2" 
+                <Progress
+                  value={calculateProgressPercentage(leave.used, leave.total || 1)}
+                  className="h-2" 
                   style={{ backgroundColor: `${leave.color}30` }}
                 />
                 {leave.remaining < 5 && (
@@ -129,7 +140,10 @@ export const LeaveOverview = () => {
                         <ChartTooltipContent
                           labelKey="name"
                           labelFormatter={(value) => `${value} Leave`}
-                          formatter={(value, name) => [`${value} days (${Math.round((value / 18) * 100)}%)`, name]}
+                          formatter={(value, name) => {
+                            const percentage = typeof value === 'number' ? Math.round((value / (totalLeaveDays || 1)) * 100) : 0;
+                            return [`${value} days (${percentage}%)`, name];
+                          }}
                         />
                       }
                     />
@@ -229,4 +243,3 @@ export const LeaveOverview = () => {
     </div>
   );
 };
-
