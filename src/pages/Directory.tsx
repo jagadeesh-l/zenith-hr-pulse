@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarContent } from "@/components/SidebarContent";
@@ -19,12 +18,16 @@ import { Card } from "@/components/ui/card";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { EmployeeList } from "@/components/EmployeeList";
 import { EmployeeHierarchy } from "@/components/EmployeeHierarchy";
+import { AddEmployeeForm } from "@/components/employee/AddEmployeeForm";
+import { ImportEmployees } from "@/components/employee/ImportEmployees";
+import { useAuth } from "@/hooks/use-auth"; // Assuming you have this
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEmployees } from '@/hooks/use-employees';
 
 type ViewMode = "grid" | "list" | "hierarchy";
 
@@ -34,21 +37,25 @@ export default function Directory() {
   const [activeModule, setActiveModule] = useState<string>("Directory");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const isAdmin = true; // For demo purposes, assume admin
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleRightSidebar = () => setRightSidebarOpen(!rightSidebarOpen);
   
-  // Sample employee data
-  const employees = [
-    { id: "1", name: "Alex Johnson", position: "Developer", department: "Engineering", photoUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "2", name: "Emma Wilson", position: "Designer", department: "Product", photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "3", name: "Michael Chen", position: "Manager", department: "Operations", photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "4", name: "Sarah Brown", position: "HR Specialist", department: "HR", photoUrl: "https://images.unsplash.com/photo-1503185912284-5271ff81b9a8?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "5", name: "David Kim", position: "Senior Developer", department: "Engineering", photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "6", name: "Olivia Martinez", position: "UX Researcher", department: "Product", photoUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "7", name: "James Taylor", position: "DevOps Engineer", department: "Engineering", photoUrl: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-    { id: "8", name: "Sophia Lee", position: "Product Manager", department: "Product", photoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" },
-  ];
+  const { 
+    employees, 
+    isLoading, 
+    error,
+    createEmployee,
+    importEmployeesFromCsv 
+  } = useEmployees();
+  
+  // Available departments for filters and forms
+  const departments = ["Engineering", "Product", "Operations", "HR", "Finance", "Marketing", "Sales"];
   
   const toggleFilter = (filter: string) => {
     setActiveFilters(prev => 
@@ -59,6 +66,22 @@ export default function Directory() {
   };
   
   const clearFilters = () => setActiveFilters([]);
+  
+  // Filter employees based on search query and active filters
+  const filteredEmployees = employees.filter(employee => {
+    // Search filter
+    if (searchQuery && !employee.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Department filters
+    if (activeFilters.some(filter => filter.startsWith("Department:")) && 
+        !activeFilters.includes(`Department: ${employee.department}`)) {
+      return false;
+    }
+    
+    return true;
+  });
   
   return (
     <div className="min-h-screen bg-background">
@@ -184,27 +207,27 @@ export default function Directory() {
             
             {/* Employee Directory */}
             <div className="mb-8">
-              {viewMode === "grid" && (
+              {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+                </div>
+              ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {employees.map((employee) => (
+                  {filteredEmployees.map((employee) => (
                     <EmployeeCard
                       key={employee.id}
-                      id={employee.id}
-                      name={employee.name}
-                      position={employee.position}
-                      department={employee.department}
-                      photoUrl={employee.photoUrl}
+                      {...employee}
                     />
                   ))}
                 </div>
               )}
               
               {viewMode === "list" && (
-                <EmployeeList employees={employees} />
+                <EmployeeList employees={filteredEmployees} />
               )}
               
               {viewMode === "hierarchy" && (
-                <EmployeeHierarchy employees={employees} />
+                <EmployeeHierarchy employees={filteredEmployees} />
               )}
             </div>
           </div>

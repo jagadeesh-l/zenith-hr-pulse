@@ -1,0 +1,24 @@
+features:
+  import_linkedin: false
+  export_csv: true
+  org_chart_view: true
+  employee_photos: true
+  advanced_search: true
+  bulk_upload: true
+  activity_tracking: false
+  performance_metrics: false
+
+roles:
+  admin:
+    can_create: true
+    can_edit: true
+    can_delete: true
+    can_import: true
+    can_export: true
+  
+  user:
+    can_create: false
+    can_edit: false
+    can_delete: false
+    can_import: false
+    can_export: true 

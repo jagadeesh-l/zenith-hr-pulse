@@ -1,24 +1,36 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Share2, MessageSquare, Star, ListOrdered, Clock, Award, GamepadIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BeeGame } from "./DinosaurGame";
+import { BeeLeaderboard } from "./DinoLeaderboard";
+import { gamesConfig, generateBeeLeaderboard } from "@/config/games";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function GameSection() {
   const [timer, setTimer] = useState(0);
   const [isActive, setIsActive] = useState(false);
+  const [activeGame, setActiveGame] = useState<string | null>(null);
+  const [showBeeGame, setshowBeeGame] = useState(false);
+  const [showBeeLeaderboard, setshowBeeLeaderboard] = useState(false);
   const { toast } = useToast();
-
-  // Timer functionality
+  const [beeLeaderboard, setBeeLeaderboard] = useState(generateBeeLeaderboard());
+  
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
     if (isActive) {
       interval = setInterval(() => {
         setTimer(seconds => {
-          // Alert if 15 minutes have passed (900 seconds)
           if (seconds >= 899) {
             setIsActive(false);
             toast({
@@ -40,7 +52,35 @@ export function GameSection() {
     };
   }, [isActive, toast]);
 
-  // Format time as mm:ss
+  useEffect(() => {
+    const savedScores = localStorage.getItem('beeGameScores');
+    if (savedScores) {
+      try {
+        setBeeLeaderboard(JSON.parse(savedScores));
+      } catch (e) {
+        console.error("Failed to parse saved scores", e);
+      }
+    } else {
+      localStorage.setItem('beeGameScores', JSON.stringify(beeLeaderboard));
+    }
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'beeGameScores') {
+        try {
+          const newScores = JSON.parse(e.newValue || '[]');
+          setBeeLeaderboard(newScores);
+        } catch (e) {
+          console.error("Failed to parse updated scores", e);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -48,11 +88,17 @@ export function GameSection() {
   };
 
   const handleStartGame = (gameType: string) => {
+    setActiveGame(gameType);
     setIsActive(true);
-    toast({
-      title: `Starting ${gameType}`,
-      description: "Timer started. You'll be reminded after 15 minutes."
-    });
+    
+    if (gameType === "Bee Game") {
+      setshowBeeGame(true);
+    } else {
+      toast({
+        title: `Starting ${gameType}`,
+        description: "Timer started. You'll be reminded after 15 minutes."
+      });
+    }
   };
 
   const handleShareToFeed = (gameType: string) => {
@@ -62,45 +108,21 @@ export function GameSection() {
     });
   };
 
-  const games = [
-    {
-      id: 1,
-      title: "Team Trivia",
-      description: "Test your knowledge about company facts and industry trends",
-      image: "https://images.unsplash.com/photo-1553481187-be93c21490a9?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      leaderboard: [
-        { name: "Alex Johnson", score: 85 },
-        { name: "Emma Wilson", score: 79 },
-        { name: "Michael Chen", score: 72 },
-      ]
-    },
-    {
-      id: 2,
-      title: "Word Puzzle",
-      description: "Challenge your vocabulary with company-related word puzzles",
-      image: "https://images.unsplash.com/photo-1606677661991-446cea8ee182?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      leaderboard: [
-        { name: "Sarah Brown", score: 92 },
-        { name: "David Kim", score: 88 },
-        { name: "Alex Johnson", score: 75 },
-      ]
-    },
-    {
-      id: 3,
-      title: "Memory Match",
-      description: "Test your memory by matching company products and services",
-      image: "https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      leaderboard: [
-        { name: "Emma Wilson", score: 95 },
-        { name: "Michael Chen", score: 90 },
-        { name: "Sarah Brown", score: 82 },
-      ]
+  const handleShowLeaderboard = (gameType: string) => {
+    if (gameType === "Bee Game") {
+      setshowBeeLeaderboard(true);
+    } else {
+      toast({
+        title: `${gameType} Leaderboard`,
+        description: "Viewing full leaderboard."
+      });
     }
-  ];
+  };
+
+  const game = gamesConfig.beeGame;
 
   return (
     <div className="space-y-8">
-      {/* Timer Section */}
       <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg border border-border mb-6">
         <div className="flex items-center space-x-4">
           <Clock className="text-primary" size={24} />
@@ -122,71 +144,98 @@ export function GameSection() {
         </div>
       </div>
       
-      {/* Games Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {games.map((game) => (
-          <Card key={game.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border">
-            <div className="aspect-video w-full overflow-hidden">
-              <img 
-                src={game.image} 
-                alt={game.title} 
-                className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
-              />
+      <div className="max-w-2xl mx-auto">
+        <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border">
+          <div className="aspect-video w-full overflow-hidden">
+            <img 
+              src={game.image} 
+              alt={game.title} 
+              className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
+            />
+          </div>
+          
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>{game.title}</CardTitle>
+                <CardDescription>{game.description}</CardDescription>
+              </div>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Award size={14} />
+                <span>{game.active ? "Active" : "Active"}</span>
+              </Badge>
             </div>
-            
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{game.title}</CardTitle>
-                  <CardDescription>{game.description}</CardDescription>
-                </div>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Award size={14} />
-                  <span>Active</span>
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="mb-4">
-                <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-                  <ListOrdered size={16} />
-                  <span>Leaderboard</span>
-                </h4>
-                <div className="space-y-2">
-                  {game.leaderboard.map((leader, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-2">
-                        {idx === 0 && <Star className="text-amber-500" size={16} />}
-                        <span>{leader.name}</span>
-                      </div>
-                      <span className="font-medium">{leader.score} pts</span>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="mb-4">
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
+                <ListOrdered size={16} />
+                <span>Leaderboard</span>
+              </h4>
+              <div className="space-y-2">
+                {beeLeaderboard.slice(0, 3).map((leader, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      {idx === 0 && <Star className="text-amber-500" size={16} />}
+                      <span>{leader.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <span className="font-medium">{leader.score} pts</span>
+                  </div>
+                ))}
               </div>
-            </CardContent>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex justify-between border-t border-border pt-4">
+            <Dialog open={showBeeGame} onOpenChange={setshowBeeGame}>
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={() => handleStartGame(game.title)}>
+                  <GamepadIcon className="mr-1 h-4 w-4" />
+                  Play Now
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-3xl w-[90vw]">
+                <DialogHeader>
+                  <DialogTitle>{game.title}</DialogTitle>
+                  <DialogDescription>
+                    Guide your bee over obstacles and set a high score!
+                  </DialogDescription>
+                </DialogHeader>
+                <BeeGame />
+              </DialogContent>
+            </Dialog>
             
-            <CardFooter className="flex justify-between border-t border-border pt-4">
-              <Button size="sm" onClick={() => handleStartGame(game.title)}>
-                <GamepadIcon className="mr-1 h-4 w-4" />
-                Play Now
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={() => handleShareToFeed(game.title)}>
+                <MessageSquare size={18} />
               </Button>
-              
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" onClick={() => handleShareToFeed(game.title)}>
-                  <MessageSquare size={18} />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Share2 size={18} />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <ListOrdered size={18} />
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
+              <Button variant="ghost" size="icon">
+                <Share2 size={18} />
+              </Button>
+              <Dialog open={showBeeLeaderboard} onOpenChange={setshowBeeLeaderboard}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleShowLeaderboard(game.title)}
+                  >
+                    <ListOrdered size={18} />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Bee Game Leaderboard</DialogTitle>
+                    <DialogDescription>
+                      Top scores from all players
+                    </DialogDescription>
+                  </DialogHeader>
+                  <BeeLeaderboard />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

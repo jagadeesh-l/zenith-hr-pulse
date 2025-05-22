@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -14,6 +13,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loginClicked, setLoginClicked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   
   const introVideoRef = useRef<HTMLVideoElement>(null);
@@ -58,7 +58,7 @@ export default function Login() {
     };
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Email validation
@@ -74,26 +74,57 @@ export default function Login() {
       return;
     }
     
-    // Set login clicked to start the transition video
-    setLoginClicked(true);
+    setIsLoading(true);
     
-    // Hide intro video and show login video
-    if (introVideoRef.current) {
-      introVideoRef.current.pause();
-      introVideoRef.current.style.display = 'none';
-    }
-    
-    if (loginVideoRef.current) {
-      loginVideoRef.current.style.display = 'block';
-      
-      // Try to play the video, but if it fails, navigate anyway
-      loginVideoRef.current.play().catch(err => {
-        console.error("Could not play login video:", err);
-        navigate("/dashboard");
+    try {
+      // Call the FastAPI backend for authentication
+      const response = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        }),
       });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        toast.error(data.detail || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Store token in localStorage
+      localStorage.setItem('auth_token', data.access_token);
+      
+      // Set login clicked to start the transition video
+      setLoginClicked(true);
+      
+      // Hide intro video and show login video
+      if (introVideoRef.current) {
+        introVideoRef.current.pause();
+        introVideoRef.current.style.display = 'none';
+      }
+      
+      if (loginVideoRef.current) {
+        loginVideoRef.current.style.display = 'block';
+        
+        // Try to play the video, but if it fails, navigate anyway
+        loginVideoRef.current.play().catch(err => {
+          console.error("Could not play login video:", err);
+          navigate("/dashboard");
+        });
+      }
+      
+      toast.success("Login successful! Redirecting to dashboard...");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Connection error. Please try again.");
+      setIsLoading(false);
     }
-    
-    toast.success("Login successful! Redirecting to dashboard...");
   };
 
   const togglePasswordVisibility = () => {
@@ -129,7 +160,7 @@ export default function Login() {
       {/* Main Content - Split into two columns */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left side - Game space */}
+          {/* Right side - Video container */}
           <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30">
             {/* Intro Video - Always playing until login */}
             <video 
@@ -140,7 +171,7 @@ export default function Login() {
               className="w-full h-full object-cover absolute inset-0"
               style={{ display: loginClicked ? 'none' : 'block' }}
             >
-              <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-city-11758-large.mp4" type="video/mp4" />
+              <source src="/src/video/Start.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
             
@@ -151,19 +182,12 @@ export default function Login() {
               className="w-full h-full object-cover absolute inset-0"
               style={{ display: 'none' }}
             >
-              <source src="https://assets.mixkit.co/videos/preview/mixkit-futuristic-urban-traffic-in-the-city-40837-large.mp4" type="video/mp4" />
+              <source src="/src/video/after login.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
-            
-            {!loginClicked && (
-              <div className="text-center relative z-10">
-                <h2 className="text-2xl font-bold text-gradient-primary mb-4">Future Game Space</h2>
-                <p className="text-muted-foreground">This area will contain an interactive game implemented by the backend team.</p>
-              </div>
-            )}
           </div>
           
-          {/* Right side - Login form */}
+          {/* Left side - Login form */}
           <div>
             <div className="mb-10 text-center">
               <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">HR Portal</h1>
@@ -183,6 +207,7 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
                     className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow"
+                    disabled={isLoading || loginClicked}
                     required
                   />
                 </div>
@@ -199,6 +224,7 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow pr-10"
+                      disabled={isLoading || loginClicked}
                       required
                     />
                     <button
@@ -206,6 +232,7 @@ export default function Login() {
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={togglePasswordVisibility}
                       tabIndex={-1}
+                      disabled={isLoading || loginClicked}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -218,6 +245,7 @@ export default function Login() {
                       id="remember-me" 
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(!!checked)}
+                      disabled={isLoading || loginClicked}
                     />
                     <label htmlFor="remember-me" className="text-sm">
                       Remember me
@@ -233,10 +261,16 @@ export default function Login() {
                   type="submit" 
                   className="w-full bg-gradient-hr-primary hover:opacity-90" 
                   size="lg"
-                  disabled={loginClicked}
+                  disabled={isLoading || loginClicked}
                 >
-                  {loginClicked ? "Signing In..." : "Sign In"}
+                  {isLoading ? "Signing In..." : loginClicked ? "Signed In" : "Sign In"}
                 </Button>
+                
+                {/* Demo credentials */}
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  <p>Demo login: admin@example.com / admin123</p>
+                  <p>or: user@example.com / user123</p>
+                </div>
               </form>
             </div>
           </div>
