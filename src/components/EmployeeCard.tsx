@@ -86,7 +86,19 @@ export function EmployeeCard(props: EmployeeCardProps) {
       <EmployeeProfile 
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
-        employee={props}
+        employee={{
+          id: props.id,
+          name: props.name,
+          position: props.position,
+          department: props.department,
+          photoUrl: props.photoUrl || '', // Provide a default empty string for photoUrl
+          email: props.email,
+          phone: props.phone,
+          bio: props.bio,
+          startDate: props.startDate,
+          manager: props.manager,
+          skills: props.skills
+        }}
       />
     </>
   );
