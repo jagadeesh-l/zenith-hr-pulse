@@ -8,7 +8,7 @@ export type EmployeeCardProps = {
   name: string;
   position: string;
   department: string;
-  photoUrl?: string; // Changed from required to optional
+  photoUrl?: string; // Optional photo URL
   email?: string;
   phone?: string;
   bio?: string;

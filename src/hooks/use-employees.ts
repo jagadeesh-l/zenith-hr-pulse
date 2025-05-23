@@ -66,7 +66,7 @@ export function useEmployees() {
       setIsLoading(false);
     }
   };
-
+  
   // Get employee by ID
   const getEmployee = async (id: string): Promise<Employee | null> => {
     try {
@@ -305,4 +305,4 @@ export function useEmployees() {
     deleteEmployee,
     importEmployeesFromCsv
   };
-} 
+}

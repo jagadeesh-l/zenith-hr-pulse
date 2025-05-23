@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarContent } from "@/components/SidebarContent";
@@ -15,7 +16,7 @@ import {
   Plus 
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { EmployeeCard } from "@/components/EmployeeCard";
+import { EmployeeCard, EmployeeCardProps } from "@/components/EmployeeCard";
 import { EmployeeList } from "@/components/EmployeeList";
 import { EmployeeHierarchy } from "@/components/EmployeeHierarchy";
 import { AddEmployeeForm } from "@/components/employee/AddEmployeeForm";
@@ -27,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEmployees } from '@/hooks/use-employees';
+import { useEmployees, Employee as ApiEmployee } from '@/hooks/use-employees';
 
 type ViewMode = "grid" | "list" | "hierarchy";
 
@@ -223,11 +224,11 @@ export default function Directory() {
               )}
               
               {viewMode === "list" && (
-                <EmployeeList employees={filteredEmployees} />
+                <EmployeeList employees={filteredEmployees as any} />
               )}
               
               {viewMode === "hierarchy" && (
-                <EmployeeHierarchy employees={filteredEmployees} />
+                <EmployeeHierarchy employees={filteredEmployees as any} />
               )}
             </div>
           </div>
