@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Directory from "./pages/Directory";
 import Engagement from "./pages/Engagement";
 import Leave from "./pages/Leave";
+import Recruitment from "./pages/Recruitment";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/directory" element={<Directory />} />
           <Route path="/engagement" element={<Engagement />} />
           <Route path="/leave" element={<Leave />} />
+          <Route path="/recruitment" element={<Recruitment />} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
