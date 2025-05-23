@@ -97,8 +97,8 @@ export function InterviewScheduler() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="border rounded-md p-2"
-                disabledDates={(date) => {
+                className="border rounded-md p-2 pointer-events-auto"
+                disabled={(date) => {
                   // Disable weekends
                   return date.getDay() === 0 || date.getDay() === 6;
                 }}

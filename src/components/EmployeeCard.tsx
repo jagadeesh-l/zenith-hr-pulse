@@ -1,13 +1,14 @@
+
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { EmployeeProfile } from "./employee/EmployeeProfile";
 
-type EmployeeCardProps = {
+export type EmployeeCardProps = {
   id: string;
   name: string;
   position: string;
   department: string;
-  photoUrl: string;
+  photoUrl?: string; // Changed from required to optional
   email?: string;
   phone?: string;
   bio?: string;
