@@ -13,6 +13,7 @@ import Engagement from "./pages/Engagement";
 import Leave from "./pages/Leave";
 import Recruitment from "./pages/Recruitment";
 import Performance from "./pages/Performance";
+import ResourceHub from "./pages/ResourceHub";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/leave" element={<Leave />} />
           <Route path="/recruitment" element={<Recruitment />} />
           <Route path="/performance" element={<Performance />} />
+          <Route path="/resource-hub" element={<ResourceHub />} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

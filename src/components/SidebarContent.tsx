@@ -6,14 +6,14 @@ import {
   UserPlus, 
   BarChart2, 
   Layout, 
-  MessageSquare, 
   ClipboardCheck, 
   DollarSign, 
   BookOpen, 
   Award, 
   TrendingUp, 
   HelpCircle,
-  Star
+  Star,
+  Folders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
     { name: 'Analytics', icon: <TrendingUp size={20} /> },
     { name: 'Engagement', icon: <Star size={20} />, to: '/engagement' },
     { name: 'Organization', icon: <Layout size={20} /> },
-    { name: 'Assistant', icon: <MessageSquare size={20} /> },
+    { name: 'Resource Hub', icon: <Folders size={20} />, to: '/resource-hub' },
     { name: 'Reporting', icon: <FileText size={20} /> },
     { name: 'Compensation', icon: <DollarSign size={20} /> },
     { name: 'Learning', icon: <BookOpen size={20} /> },

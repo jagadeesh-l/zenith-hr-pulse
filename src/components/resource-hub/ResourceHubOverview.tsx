@@ -1,0 +1,385 @@
+
+import { useState } from "react";
+import { 
+  Bell, 
+  Search, 
+  Filter,
+  TrendingUp,
+  Users,
+  Folders,
+  BarChart3,
+  Lightbulb,
+  Target,
+  Calendar,
+  BookOpen,
+  CheckCircle,
+  AlertTriangle,
+  Plus,
+  DragHandleDots2
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+
+export function ResourceHubOverview() {
+  const [isAutoSync, setIsAutoSync] = useState(true);
+  const [hasNewAlerts, setHasNewAlerts] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  
+  const utilizationData = [
+    { project: "Project Alpha", utilization: 85, members: 6 },
+    { project: "Project Beta", utilization: 92, members: 4 },
+    { project: "Project Gamma", utilization: 68, members: 8 },
+    { project: "Project Delta", utilization: 105, members: 5 }
+  ];
+
+  const teamMembers = [
+    { name: "Sarah Chen", role: "Frontend Developer", skills: ["React", "TypeScript", "Figma"], project: "Project Alpha", utilization: 90 },
+    { name: "Mike Johnson", role: "Backend Developer", skills: ["Node.js", "Python", "AWS"], project: "Project Beta", utilization: 85 },
+    { name: "Emma Davis", role: "UI/UX Designer", skills: ["Design", "Prototyping", "User Research"], project: "Project Alpha", utilization: 75 },
+    { name: "Alex Rodriguez", role: "DevOps Engineer", skills: ["Docker", "Kubernetes", "CI/CD"], project: "Project Gamma", utilization: 110 }
+  ];
+
+  const skillFilters = ["All", "Backend", "Frontend", "Design", "DevOps", "QA"];
+
+  const growthRecommendations = [
+    {
+      title: "Advanced React Performance",
+      type: "Course",
+      reason: "Based on frontend utilization patterns",
+      priority: "High"
+    },
+    {
+      title: "AWS Cloud Architecture",
+      type: "Certification",
+      reason: "Infrastructure skills gap identified",
+      priority: "Medium"
+    },
+    {
+      title: "Agile Project Management",
+      type: "Workshop",
+      reason: "Cross-team collaboration needs",
+      priority: "High"
+    }
+  ];
+
+  const taskCards = [
+    { id: 1, title: "API Integration", effort: "3d", priority: "High" },
+    { id: 2, title: "UI Component Library", effort: "5d", priority: "Medium" },
+    { id: 3, title: "Database Migration", effort: "2d", priority: "High" },
+    { id: 4, title: "Performance Testing", effort: "1d", priority: "Low" }
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* Utilization & Integrations */}
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Project & Resource Utilization</CardTitle>
+                <CardDescription>Real-time capacity and allocation insights</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Badge variant="secondary" className="bg-teal-100 text-teal-800 font-semibold">
+                87% Avg Utilization
+              </Badge>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-slate-600">Auto-sync from Jira</span>
+                <Switch 
+                  checked={isAutoSync} 
+                  onCheckedChange={setIsAutoSync}
+                  className="data-[state=checked]:bg-teal-500"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={`relative ${hasNewAlerts ? 'animate-pulse' : ''}`}
+                onClick={() => setHasNewAlerts(false)}
+              >
+                <Bell className={`w-4 h-4 ${hasNewAlerts ? 'animate-bounce' : ''}`} />
+                {hasNewAlerts && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {utilizationData.map((project, index) => (
+                <div key={project.project} className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-slate-900">{project.project}</h4>
+                    <Badge 
+                      variant={project.utilization > 100 ? "destructive" : project.utilization > 85 ? "default" : "secondary"}
+                      className={project.utilization > 100 ? "" : project.utilization > 85 ? "bg-teal-500" : ""}
+                    >
+                      {project.utilization}%
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Team Size</span>
+                      <span className="font-medium">{project.members} members</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-1000 ease-out ${
+                          project.utilization > 100 ? 'bg-red-500' : 
+                          project.utilization > 85 ? 'bg-teal-500' : 'bg-gray-400'
+                        }`}
+                        style={{ 
+                          width: `${Math.min(project.utilization, 100)}%`,
+                          animationDelay: `${index * 200}ms`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Skills & Roles Directory */}
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Skills & Roles Directory</CardTitle>
+                <CardDescription>Team capabilities and current assignments</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Input 
+                  placeholder="Search team members..." 
+                  className="pl-10 w-64"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {skillFilters.map((filter) => (
+                <Button
+                  key={filter}
+                  variant={selectedFilter === filter ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedFilter(filter)}
+                  className={`transition-all duration-300 ${
+                    selectedFilter === filter 
+                      ? "bg-teal-500 hover:bg-teal-600 text-white" 
+                      : "hover:bg-teal-50 hover:text-teal-700 hover:border-teal-300"
+                  }`}
+                >
+                  {filter}
+                </Button>
+              ))}
+            </div>
+            
+            <div className="space-y-3">
+              {teamMembers.map((member, index) => (
+                <div 
+                  key={member.name} 
+                  className="p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all duration-300 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">{member.name}</h4>
+                        <p className="text-sm text-slate-600">{member.role}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex flex-wrap gap-1">
+                        {member.skills.map((skill) => (
+                          <Badge key={skill} variant="secondary" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-600">Current Project</p>
+                        <p className="font-medium text-sm">{member.project}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-600">Utilization</p>
+                        <Badge 
+                          variant={member.utilization > 100 ? "destructive" : member.utilization > 85 ? "default" : "secondary"}
+                          className={member.utilization > 100 ? "" : member.utilization > 85 ? "bg-teal-500" : ""}
+                        >
+                          {member.utilization}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Team Load Balancer */}
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <Target className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Team Load Balancer</CardTitle>
+              <CardDescription>Drag and drop tasks to optimize team allocation</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h4 className="font-semibold text-slate-900 flex items-center">
+                <Plus className="w-4 h-4 mr-2" />
+                Available Tasks
+              </h4>
+              <div className="space-y-3">
+                {taskCards.map((task) => (
+                  <div 
+                    key={task.id}
+                    className="p-3 rounded-lg border border-slate-200 bg-white hover:shadow-md hover:scale-105 transition-all duration-300 cursor-grab active:cursor-grabbing group"
+                    draggable
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <DragHandleDots2 className="w-4 h-4 text-slate-400 group-hover:text-teal-500" />
+                        <div>
+                          <h5 className="font-medium text-slate-900">{task.title}</h5>
+                          <p className="text-sm text-slate-600">{task.effort} effort</p>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={task.priority === 'High' ? 'destructive' : task.priority === 'Medium' ? 'default' : 'secondary'}
+                        className={task.priority === 'Medium' ? 'bg-orange-500' : ''}
+                      >
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="font-semibold text-slate-900 flex items-center">
+                <Users className="w-4 h-4 mr-2" />
+                Team Assignment
+              </h4>
+              <div className="space-y-3">
+                {teamMembers.slice(0, 3).map((member) => (
+                  <div 
+                    key={member.name}
+                    className="p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-teal-400 hover:bg-teal-50 transition-all duration-300 min-h-[80px] flex items-center"
+                  >
+                    <div className="flex items-center space-x-3 w-full">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold text-sm">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-medium text-slate-900">{member.name}</h5>
+                        <p className="text-sm text-slate-600">{member.utilization}% utilized</p>
+                      </div>
+                      <div className="text-sm text-slate-500">Drop tasks here</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Growth Recommendations */}
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Growth Recommendations</CardTitle>
+              <CardDescription>AI-suggested learning based on utilization patterns</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {growthRecommendations.map((recommendation, index) => (
+              <div 
+                key={index}
+                className="p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all duration-300 group hover:shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center transition-colors duration-300">
+                      <BookOpen className="w-5 h-5 text-slate-600 group-hover:text-teal-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">{recommendation.title}</h4>
+                      <div className="flex items-center space-x-4 text-sm text-slate-600">
+                        <span>{recommendation.type}</span>
+                        <span>•</span>
+                        <span>{recommendation.reason}</span>
+                        <Badge 
+                          variant={recommendation.priority === 'High' ? 'destructive' : 'secondary'}
+                          className={recommendation.priority === 'High' ? '' : 'bg-orange-100 text-orange-800'}
+                        >
+                          {recommendation.priority} Priority
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="group-hover:bg-teal-500 group-hover:text-white group-hover:border-teal-500 transition-all duration-300"
+                  >
+                    Add to Learning Plan
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200">
+            <div className="flex items-center space-x-3">
+              <Lightbulb className="w-5 h-5 text-teal-600" />
+              <div>
+                <p className="font-semibold text-teal-900">AI Insight</p>
+                <p className="text-sm text-teal-700">These recommendations are based on current project demands and skill utilization patterns</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
