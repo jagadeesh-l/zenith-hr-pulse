@@ -55,10 +55,10 @@ export function PerformanceOverview() {
     <div className="space-y-8">
       {/* Overdue Check-in Banner */}
       {showOverdueCheckIn && (
-        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 animate-fade-in">
+        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 animate-fade-in hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
           <CardContent className="flex items-center justify-between p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-amber-600" />
               </div>
               <div>
@@ -88,10 +88,10 @@ export function PerformanceOverview() {
       )}
 
       {/* Smart Goals & OKRs */}
-      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-2xl">
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
         <CardHeader className="pb-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
               <Target className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -134,10 +134,10 @@ export function PerformanceOverview() {
       </Card>
 
       {/* AI-Driven 360° Feedback */}
-      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
         <CardHeader>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <MessageSquare className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -149,21 +149,21 @@ export function PerformanceOverview() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100">
-              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-3">
                 <Star className="w-6 h-6 text-purple-600" />
               </div>
               <h4 className="font-semibold text-purple-900 mb-1">Strengths</h4>
               <p className="text-sm text-purple-700">Leadership, Communication</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-3">
                 <TrendingUp className="w-6 h-6 text-amber-600" />
               </div>
               <h4 className="font-semibold text-amber-900 mb-1">Growth Areas</h4>
               <p className="text-sm text-amber-700">Time Management</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-3">
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <h4 className="font-semibold text-green-900 mb-1">Bias Check</h4>
@@ -184,11 +184,11 @@ export function PerformanceOverview() {
       </Card>
 
       {/* Performance Trends */}
-      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
                 <BarChart3 className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -234,10 +234,10 @@ export function PerformanceOverview() {
       </Card>
 
       {/* Growth Recommendations */}
-      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
         <CardHeader>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -252,7 +252,7 @@ export function PerformanceOverview() {
               <div key={index} className="p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all duration-300 group">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center transition-colors duration-300">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center transition-colors duration-300">
                       {item.icon}
                     </div>
                     <div>

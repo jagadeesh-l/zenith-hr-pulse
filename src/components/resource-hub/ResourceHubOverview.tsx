@@ -15,7 +15,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
-  GripVertical
+  GripVertical,
+  Edit2,
+  X
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ export function ResourceHubOverview() {
   const [isAutoSync, setIsAutoSync] = useState(true);
   const [hasNewAlerts, setHasNewAlerts] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [editingMember, setEditingMember] = useState<number | null>(null);
   
   const utilizationData = [
     { project: "Project Alpha", utilization: 85, members: 6 },
@@ -35,42 +38,85 @@ export function ResourceHubOverview() {
     { project: "Project Delta", utilization: 105, members: 5 }
   ];
 
-  const teamMembers = [
-    { name: "Sarah Chen", role: "Frontend Developer", skills: ["React", "TypeScript", "Figma"], project: "Project Alpha", utilization: 90 },
-    { name: "Mike Johnson", role: "Backend Developer", skills: ["Node.js", "Python", "AWS"], project: "Project Beta", utilization: 85 },
-    { name: "Emma Davis", role: "UI/UX Designer", skills: ["Design", "Prototyping", "User Research"], project: "Project Alpha", utilization: 75 },
-    { name: "Alex Rodriguez", role: "DevOps Engineer", skills: ["Docker", "Kubernetes", "CI/CD"], project: "Project Gamma", utilization: 110 }
-  ];
+  const [teamMembers, setTeamMembers] = useState([
+    { 
+      id: 1,
+      name: "Sarah Chen", 
+      role: "Frontend Developer", 
+      skills: ["React", "TypeScript", "Figma"], 
+      projects: ["Project Alpha"],
+      utilization: 90 
+    },
+    { 
+      id: 2,
+      name: "Mike Johnson", 
+      role: "Backend Developer", 
+      skills: ["Node.js", "Python", "AWS"], 
+      projects: ["Project Beta", "Project Gamma"],
+      utilization: 85 
+    },
+    { 
+      id: 3,
+      name: "Emma Davis", 
+      role: "UI/UX Designer", 
+      skills: ["Design", "Prototyping", "User Research"], 
+      projects: ["Project Alpha"],
+      utilization: 75 
+    },
+    { 
+      id: 4,
+      name: "Alex Rodriguez", 
+      role: "DevOps Engineer", 
+      skills: ["Docker", "Kubernetes", "CI/CD"], 
+      projects: ["Project Gamma", "Project Delta"],
+      utilization: 110 
+    }
+  ]);
 
   const skillFilters = ["All", "Backend", "Frontend", "Design", "DevOps", "QA"];
 
-  const growthRecommendations = [
-    {
-      title: "Advanced React Performance",
-      type: "Course",
-      reason: "Based on frontend utilization patterns",
-      priority: "High"
-    },
-    {
-      title: "AWS Cloud Architecture",
-      type: "Certification",
-      reason: "Infrastructure skills gap identified",
-      priority: "Medium"
-    },
-    {
-      title: "Agile Project Management",
-      type: "Workshop",
-      reason: "Cross-team collaboration needs",
-      priority: "High"
-    }
+  const taskCards = [
+    { id: 1, title: "API Integration", effort: "3d", priority: "High", project: "Project Alpha" },
+    { id: 2, title: "UI Component Library", effort: "5d", priority: "Medium", project: "Project Beta" },
+    { id: 3, title: "Database Migration", effort: "2d", priority: "High", project: "Project Gamma" },
+    { id: 4, title: "Performance Testing", effort: "1d", priority: "Low", project: "Project Delta" }
   ];
 
-  const taskCards = [
-    { id: 1, title: "API Integration", effort: "3d", priority: "High" },
-    { id: 2, title: "UI Component Library", effort: "5d", priority: "Medium" },
-    { id: 3, title: "Database Migration", effort: "2d", priority: "High" },
-    { id: 4, title: "Performance Testing", effort: "1d", priority: "Low" }
-  ];
+  const projects = ["Project Alpha", "Project Beta", "Project Gamma", "Project Delta"];
+
+  const addSkill = (memberId: number, skill: string) => {
+    if (!skill.trim()) return;
+    setTeamMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, skills: [...member.skills, skill.trim()] }
+        : member
+    ));
+  };
+
+  const removeSkill = (memberId: number, skillToRemove: string) => {
+    setTeamMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, skills: member.skills.filter(skill => skill !== skillToRemove) }
+        : member
+    ));
+  };
+
+  const addProject = (memberId: number, project: string) => {
+    if (!project.trim()) return;
+    setTeamMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, projects: [...member.projects, project.trim()] }
+        : member
+    ));
+  };
+
+  const removeProject = (memberId: number, projectToRemove: string) => {
+    setTeamMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, projects: member.projects.filter(project => project !== projectToRemove) }
+        : member
+    ));
+  };
 
   return (
     <div className="space-y-8">
@@ -199,40 +245,111 @@ export function ResourceHubOverview() {
             <div className="space-y-3">
               {teamMembers.map((member, index) => (
                 <div 
-                  key={member.name} 
+                  key={member.id} 
                   className="p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all duration-300 group"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold">
                         {member.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-semibold text-slate-900">{member.name}</h4>
-                        <p className="text-sm text-slate-600">{member.role}</p>
+                        <p className="text-sm text-slate-600 mb-3">{member.role}</p>
+                        
+                        {/* Skills Section */}
+                        <div className="mb-3">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="text-sm font-medium text-slate-700">Skills</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setEditingMember(editingMember === member.id ? null : member.id)}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {member.skills.map((skill) => (
+                              <div key={skill} className="flex items-center">
+                                <Badge variant="secondary" className="text-xs">
+                                  {skill}
+                                  {editingMember === member.id && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-4 w-4 p-0 ml-1"
+                                      onClick={() => removeSkill(member.id, skill)}
+                                    >
+                                      <X className="w-2 h-2" />
+                                    </Button>
+                                  )}
+                                </Badge>
+                              </div>
+                            ))}
+                            {editingMember === member.id && (
+                              <Input
+                                placeholder="Add skill..."
+                                className="h-6 text-xs w-24"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    addSkill(member.id, e.currentTarget.value);
+                                    e.currentTarget.value = '';
+                                  }
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Projects Section */}
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="text-sm font-medium text-slate-700">Current Projects</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {member.projects.map((project) => (
+                              <div key={project} className="flex items-center">
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800 border-blue-200">
+                                  {project}
+                                  {editingMember === member.id && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-4 w-4 p-0 ml-1"
+                                      onClick={() => removeProject(member.id, project)}
+                                    >
+                                      <X className="w-2 h-2" />
+                                    </Button>
+                                  )}
+                                </Badge>
+                              </div>
+                            ))}
+                            {editingMember === member.id && (
+                              <Input
+                                placeholder="Add project..."
+                                className="h-6 text-xs w-28"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    addProject(member.id, e.currentTarget.value);
+                                    e.currentTarget.value = '';
+                                  }
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex flex-wrap gap-1">
-                        {member.skills.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-slate-600">Current Project</p>
-                        <p className="font-medium text-sm">{member.project}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-slate-600">Utilization</p>
-                        <Badge 
-                          variant={member.utilization > 100 ? "destructive" : member.utilization > 85 ? "default" : "secondary"}
-                          className={member.utilization > 100 ? "" : member.utilization > 85 ? "bg-teal-500" : ""}
-                        >
-                          {member.utilization}%
-                        </Badge>
-                      </div>
+                    <div className="text-center">
+                      <p className="text-sm text-slate-600">Utilization</p>
+                      <Badge 
+                        variant={member.utilization > 100 ? "destructive" : member.utilization > 85 ? "default" : "secondary"}
+                        className={member.utilization > 100 ? "" : member.utilization > 85 ? "bg-teal-500" : ""}
+                      >
+                        {member.utilization}%
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -266,7 +383,7 @@ export function ResourceHubOverview() {
                 {taskCards.map((task) => (
                   <div 
                     key={task.id}
-                    className="p-3 rounded-lg border border-slate-200 bg-white hover:shadow-md hover:scale-105 transition-all duration-300 cursor-grab active:cursor-grabbing group"
+                    className="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:scale-105 transition-all duration-300 cursor-grab active:cursor-grabbing group"
                     draggable
                   >
                     <div className="flex items-center justify-between">
@@ -274,7 +391,13 @@ export function ResourceHubOverview() {
                         <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-teal-500" />
                         <div>
                           <h5 className="font-medium text-slate-900">{task.title}</h5>
-                          <p className="text-sm text-slate-600">{task.effort} effort</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm text-slate-600">{task.effort} effort</p>
+                            <span className="text-slate-400">•</span>
+                            <Badge variant="outline" className="text-xs">
+                              {task.project}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       <Badge 
@@ -290,18 +413,42 @@ export function ResourceHubOverview() {
             </div>
             
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 flex items-center">
-                <Users className="w-4 h-4 mr-2" />
-                Team Assignment
-              </h4>
               <div className="space-y-3">
-                {teamMembers.slice(0, 3).map((member) => (
+                <h4 className="font-semibold text-slate-900 flex items-center">
+                  <Folders className="w-4 h-4 mr-2" />
+                  Project Assignment
+                </h4>
+                {projects.map((project) => (
                   <div 
-                    key={member.name}
+                    key={project}
                     className="p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-teal-400 hover:bg-teal-50 transition-all duration-300 min-h-[80px] flex items-center"
                   >
                     <div className="flex items-center space-x-3 w-full">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold text-sm">
+                      <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center text-white font-semibold text-sm">
+                        {project.charAt(project.length - 1)}
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-medium text-slate-900">{project}</h5>
+                        <p className="text-sm text-slate-600">
+                          {teamMembers.filter(m => m.projects.includes(project)).length} members assigned
+                        </p>
+                      </div>
+                      <div className="text-sm text-slate-500">Drop tasks here</div>
+                    </div>
+                  </div>
+                ))}
+                
+                <h4 className="font-semibold text-slate-900 flex items-center mt-6">
+                  <Users className="w-4 h-4 mr-2" />
+                  Individual Assignment
+                </h4>
+                {teamMembers.slice(0, 3).map((member) => (
+                  <div 
+                    key={member.id}
+                    className="p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-teal-400 hover:bg-teal-50 transition-all duration-300 min-h-[80px] flex items-center"
+                  >
+                    <div className="flex items-center space-x-3 w-full">
+                      <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-semibold text-sm">
                         {member.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div className="flex-1">
@@ -312,69 +459,6 @@ export function ResourceHubOverview() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Growth Recommendations */}
-      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01]">
-        <CardHeader className="pb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">Growth Recommendations</CardTitle>
-              <CardDescription>AI-suggested learning based on utilization patterns</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {growthRecommendations.map((recommendation, index) => (
-              <div 
-                key={index}
-                className="p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all duration-300 group hover:shadow-md"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center transition-colors duration-300">
-                      <BookOpen className="w-5 h-5 text-slate-600 group-hover:text-teal-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{recommendation.title}</h4>
-                      <div className="flex items-center space-x-4 text-sm text-slate-600">
-                        <span>{recommendation.type}</span>
-                        <span>•</span>
-                        <span>{recommendation.reason}</span>
-                        <Badge 
-                          variant={recommendation.priority === 'High' ? 'destructive' : 'secondary'}
-                          className={recommendation.priority === 'High' ? '' : 'bg-orange-100 text-orange-800'}
-                        >
-                          {recommendation.priority} Priority
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="group-hover:bg-teal-500 group-hover:text-white group-hover:border-teal-500 transition-all duration-300"
-                  >
-                    Add to Learning Plan
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200">
-            <div className="flex items-center space-x-3">
-              <Lightbulb className="w-5 h-5 text-teal-600" />
-              <div>
-                <p className="font-semibold text-teal-900">AI Insight</p>
-                <p className="text-sm text-teal-700">These recommendations are based on current project demands and skill utilization patterns</p>
               </div>
             </div>
           </div>
