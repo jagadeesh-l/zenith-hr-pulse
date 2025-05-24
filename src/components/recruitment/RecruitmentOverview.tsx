@@ -11,11 +11,9 @@ import {
   ClipboardList,
   Share2
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 
 type OverviewSectionProps = {
   title: string;
-  kpi: string;
   icon: React.ReactNode;
   id: string;
   active: boolean;
@@ -23,39 +21,54 @@ type OverviewSectionProps = {
   gradient: string;
 }
 
-const OverviewSection = ({ title, kpi, icon, active, onClick, gradient }: OverviewSectionProps) => (
-  <Card 
-    className={`group relative overflow-hidden transition-all duration-500 cursor-pointer border-0 shadow-lg hover:shadow-2xl hover:scale-105 ${
-      active ? 'ring-2 ring-primary/50 shadow-xl' : ''
+const OverviewSection = ({ title, icon, active, onClick, gradient }: OverviewSectionProps) => (
+  <div 
+    className={`group relative overflow-hidden transition-all duration-500 cursor-pointer transform hover:scale-105 ${
+      active ? 'scale-105' : ''
     }`}
     onClick={onClick}
   >
-    {/* Gradient Background */}
-    <div className={`absolute inset-0 ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-    
-    {/* Content */}
-    <div className="relative p-6 bg-white/90 group-hover:bg-white/95 transition-all duration-500">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 ${
-          active ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted/70 text-muted-foreground group-hover:bg-white group-hover:text-primary group-hover:shadow-lg'
+    {/* Main Card */}
+    <div className="relative h-32 w-full rounded-2xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700">
+      
+      {/* Gradient Overlay */}
+      <div className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
+      
+      {/* Active State Overlay */}
+      {active && (
+        <div className={`absolute inset-0 rounded-2xl ${gradient} opacity-20`} />
+      )}
+      
+      {/* Content */}
+      <div className="relative p-4 h-full flex flex-col items-center justify-center text-center">
+        {/* Icon */}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 mb-3 ${
+          active 
+            ? 'bg-white text-primary shadow-lg' 
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-white group-hover:text-primary group-hover:shadow-lg'
         }`}>
           {icon}
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <h3 className="font-semibold text-lg text-gray-800 group-hover:text-gray-900 transition-colors duration-300">
+        
+        {/* Title */}
+        <h3 className={`font-semibold text-sm transition-colors duration-300 ${
+          active 
+            ? 'text-primary' 
+            : 'text-gray-800 dark:text-gray-200 group-hover:text-white'
+        }`}>
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground group-hover:text-gray-600 font-medium transition-colors duration-300">
-          {kpi}
-        </p>
       </div>
       
-      {/* Hover indicator */}
-      <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+      {/* Hover Glow Effect */}
+      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      
+      {/* Active Indicator */}
+      {active && (
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-primary rounded-full shadow-lg" />
+      )}
     </div>
-  </Card>
+  </div>
 );
 
 interface RecruitmentOverviewProps {
@@ -74,65 +87,56 @@ export function RecruitmentOverview({ onSectionChange }: RecruitmentOverviewProp
     { 
       id: "job-requisition", 
       title: "Job Requisition", 
-      kpi: "25 reqs forecasted", 
-      icon: <ClipboardList size={24} />,
-      gradient: "bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20"
+      icon: <ClipboardList size={20} />,
+      gradient: "bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"
     },
     { 
       id: "job-posting", 
       title: "Job Posting", 
-      kpi: "12 active postings", 
-      icon: <FileText size={24} />,
-      gradient: "bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-cyan-500/20"
+      icon: <FileText size={20} />,
+      gradient: "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500"
     },
     { 
       id: "resume-parsing", 
       title: "Resume Parsing", 
-      kpi: "54 new candidates", 
-      icon: <UserCheck size={24} />,
-      gradient: "bg-gradient-to-br from-orange-500/20 via-red-500/20 to-pink-500/20"
+      icon: <UserCheck size={20} />,
+      gradient: "bg-gradient-to-br from-orange-500 via-red-500 to-pink-500"
     },
     { 
       id: "candidate-bot", 
       title: "AI Candidate Bot", 
-      kpi: "89% response rate", 
-      icon: <MessageSquare size={24} />,
-      gradient: "bg-gradient-to-br from-violet-500/20 via-purple-500/20 to-fuchsia-500/20"
+      icon: <MessageSquare size={20} />,
+      gradient: "bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500"
     },
     { 
       id: "interview", 
       title: "Interview Scheduler", 
-      kpi: "18 upcoming", 
-      icon: <Calendar size={24} />,
-      gradient: "bg-gradient-to-br from-green-500/20 via-emerald-500/20 to-teal-500/20"
+      icon: <Calendar size={20} />,
+      gradient: "bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500"
     },
     { 
       id: "offer", 
       title: "Offer Engine", 
-      kpi: "7 pending offers", 
-      icon: <DollarSign size={24} />,
-      gradient: "bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-red-500/20"
+      icon: <DollarSign size={20} />,
+      gradient: "bg-gradient-to-br from-yellow-500 via-orange-500 to-red-500"
     },
     { 
       id: "onboarding", 
       title: "Onboarding AI", 
-      kpi: "5 new hires", 
-      icon: <Users size={24} />,
-      gradient: "bg-gradient-to-br from-indigo-500/20 via-blue-500/20 to-purple-500/20"
+      icon: <Users size={20} />,
+      gradient: "bg-gradient-to-br from-indigo-500 via-blue-500 to-purple-500"
     },
     { 
       id: "analytics", 
       title: "Analytics", 
-      kpi: "22d avg time-to-hire", 
-      icon: <BarChart2 size={24} />,
-      gradient: "bg-gradient-to-br from-pink-500/20 via-rose-500/20 to-red-500/20"
+      icon: <BarChart2 size={20} />,
+      gradient: "bg-gradient-to-br from-pink-500 via-rose-500 to-red-500"
     },
     { 
       id: "referrals", 
       title: "Referrals", 
-      kpi: "15 active referrals", 
-      icon: <Share2 size={24} />,
-      gradient: "bg-gradient-to-br from-cyan-500/20 via-blue-500/20 to-indigo-500/20"
+      icon: <Share2 size={20} />,
+      gradient: "bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500"
     },
   ];
 
@@ -147,13 +151,12 @@ export function RecruitmentOverview({ onSectionChange }: RecruitmentOverviewProp
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4">
         {sections.map((section) => (
           <OverviewSection
             key={section.id}
             id={section.id}
             title={section.title}
-            kpi={section.kpi}
             icon={section.icon}
             gradient={section.gradient}
             active={activeSection === section.id}
