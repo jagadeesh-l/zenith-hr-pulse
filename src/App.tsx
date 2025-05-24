@@ -12,6 +12,7 @@ import Directory from "./pages/Directory";
 import Engagement from "./pages/Engagement";
 import Leave from "./pages/Leave";
 import Recruitment from "./pages/Recruitment";
+import Performance from "./pages/Performance";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/engagement" element={<Engagement />} />
           <Route path="/leave" element={<Leave />} />
           <Route path="/recruitment" element={<Recruitment />} />
+          <Route path="/performance" element={<Performance />} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

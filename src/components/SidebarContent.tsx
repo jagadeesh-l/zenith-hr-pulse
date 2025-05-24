@@ -77,7 +77,7 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
     { name: 'Directory', icon: <Users size={20} />, to: '/directory' },
     { name: 'Leave', icon: <Calendar size={20} />, to: '/leave' },
     { name: 'Recruitment', icon: <UserPlus size={20} />, to: '/recruitment' },
-    { name: 'Performance', icon: <BarChart2 size={20} /> },
+    { name: 'Performance', icon: <BarChart2 size={20} />, to: '/performance' },
     { name: 'Analytics', icon: <TrendingUp size={20} /> },
     { name: 'Engagement', icon: <Star size={20} />, to: '/engagement' },
     { name: 'Organization', icon: <Layout size={20} /> },
