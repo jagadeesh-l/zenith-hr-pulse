@@ -15,7 +15,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
-  DragHandleDots2
+  GripVertical
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -271,7 +271,7 @@ export function ResourceHubOverview() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <DragHandleDots2 className="w-4 h-4 text-slate-400 group-hover:text-teal-500" />
+                        <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-teal-500" />
                         <div>
                           <h5 className="font-medium text-slate-900">{task.title}</h5>
                           <p className="text-sm text-slate-600">{task.effort} effort</p>
