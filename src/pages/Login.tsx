@@ -77,14 +77,14 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      // Call the FastAPI backend for authentication
-      const response = await fetch('http://localhost:8000/auth/login', {
+      // Update the API endpoint to match the backend
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email,
+          username: email,  // Changed from email to username to match backend
           password
         }),
       });

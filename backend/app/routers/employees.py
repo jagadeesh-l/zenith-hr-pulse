@@ -33,6 +33,7 @@ async def get_employee_or_404(employee_id: str) -> dict:
     
     return employee
 
+@router.get("", response_model=List[EmployeeInDB])
 @router.get("/", response_model=List[EmployeeInDB])
 async def get_employees(
     skip: int = Query(0, ge=0),
@@ -41,40 +42,45 @@ async def get_employees(
     search: Optional[str] = None
 ):
     """Get all employees with optional filtering"""
-    # Build query based on filters
-    query = {}
-    if department:
-        query["department"] = department
-    
-    if search:
-        # Search in name, position, and department
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"position": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-        ]
-    
-    # Get filtered employees with pagination
-    cursor = employees_collection.find(query).skip(skip).limit(limit)
-    employees = []
-    
-    # Process results
-    async for doc in cursor:
-        doc["id"] = str(doc["_id"])
-        del doc["_id"]
-        employees.append(doc)
-    
-    return employees
+    try:
+        # Build query based on filters
+        query = {}
+        if department:
+            query["department"] = department
+        
+        if search:
+            # Search in name, position, and department
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"position": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+            ]
+        
+        # Get filtered employees with pagination
+        cursor = employees_collection.find(query).skip(skip).limit(limit)
+        employees = []
+        
+        # Process results
+        async for doc in cursor:
+            doc["id"] = str(doc["_id"])
+            del doc["_id"]
+            employees.append(doc)
+        
+        return employees
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        # Return empty list rather than failing
+        return []
 
 @router.post("/", response_model=EmployeeInDB, status_code=201)
 async def create_employee(employee: EmployeeCreate):
     """Create a new employee"""
     # Prepare employee document
-    now = datetime.datetime.now().date()
+    current_date = datetime.datetime.now().date().isoformat()
     employee_dict = employee.model_dump(exclude_unset=True)
     employee_dict.update({
-        "created_at": now,
-        "updated_at": now
+        "created_at": current_date,
+        "updated_at": current_date
     })
     
     # Insert into database
@@ -97,7 +103,7 @@ async def update_employee(employee_id: str, employee_update: EmployeeUpdate):
     
     # Prepare update data
     update_data = employee_update.model_dump(exclude_unset=True)
-    update_data["updated_at"] = datetime.datetime.now().date()
+    update_data["updated_at"] = datetime.datetime.now().date().isoformat()
     
     # Update employee
     await employees_collection.update_one(
@@ -183,4 +189,62 @@ async def import_employees_csv(
 @router.get("/feature-flags/status")
 async def get_feature_flags():
     """Get the status of all feature flags"""
-    return FeatureFlags.all_features() 
+    return FeatureFlags.all_features()
+
+@router.post("/seed-test-data", status_code=201)
+async def seed_test_data():
+    """Add sample employee data for testing"""
+    try:
+        # Check if we already have employees
+        count = await employees_collection.count_documents({})
+        if count > 0:
+            return {"message": f"Database already contains {count} employees"}
+        
+        # Get current date as ISO format string
+        current_date = datetime.datetime.now().date().isoformat()
+        
+        # Sample employee data
+        sample_employees = [
+            {
+                "name": "Alex Johnson",
+                "email": "alex.johnson@example.com",
+                "position": "Developer",
+                "department": "Engineering",
+                "phone": "+1 (555) 123-4567",
+                "bio": "Full-stack developer with 5 years of experience in React and Node.js.",
+                "start_date": "2021-05-15",
+                "photo_url": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
+                "created_at": current_date,
+                "updated_at": current_date
+            },
+            {
+                "name": "Emma Wilson",
+                "email": "emma.wilson@example.com",
+                "position": "Designer",
+                "department": "Product",
+                "start_date": "2022-01-10",
+                "photo_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
+                "created_at": current_date,
+                "updated_at": current_date
+            },
+            {
+                "name": "Michael Chen",
+                "email": "michael.chen@example.com",
+                "position": "Manager",
+                "department": "Operations",
+                "photo_url": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
+                "created_at": current_date,
+                "updated_at": current_date
+            }
+        ]
+        
+        # Insert sample data
+        result = await employees_collection.insert_many(sample_employees)
+        return {"message": f"Added {len(result.inserted_ids)} sample employees"}
+    
+    except Exception as e:
+        print(f"Error seeding test data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to seed test data: {str(e)}"
+        ) 

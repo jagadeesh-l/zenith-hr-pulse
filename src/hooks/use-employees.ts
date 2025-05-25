@@ -34,34 +34,67 @@ export function useEmployees() {
       const response = await fetch(`${API_BASE_URL}/employees`);
       
       if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`);
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
       
+      // Handle empty data case
+      if (!data || !Array.isArray(data)) {
+        console.warn("API returned non-array data:", data);
+        setEmployees([]);
+        return;
+      }
+      
       // Transform data to match our frontend model
       const transformedData = data.map((emp: any) => ({
-        id: emp.id,
-        name: emp.name,
-        position: emp.position,
-        department: emp.department,
-        photoUrl: emp.photo_url,
-        email: emp.email,
-        phone: emp.phone,
-        bio: emp.bio,
-        startDate: emp.start_date,
-        manager: emp.manager_name,
-        skills: emp.skills
+        id: emp.id || "temp-" + Math.random().toString(36).substr(2, 9),
+        name: emp.name || "Unknown",
+        position: emp.position || "Not specified",
+        department: emp.department || "Not specified",
+        photoUrl: emp.photo_url || "",
+        email: emp.email || "",
+        phone: emp.phone || "",
+        bio: emp.bio || "",
+        startDate: emp.start_date || "",
+        manager: emp.manager_name || "",
+        skills: emp.skills || []
       }));
       
       setEmployees(transformedData);
     } catch (err) {
+      console.error("Error fetching employees:", err);
       setError(err instanceof Error ? err.message : 'Failed to fetch employees');
-      toast({
-        title: 'Error',
-        description: 'Failed to load employees. Please try again.',
-        variant: 'destructive',
-      });
+      
+      // Use mock data for development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Using mock data for development");
+        const mockEmployees = [
+          { 
+            id: "1", 
+            name: "Alex Johnson", 
+            position: "Developer", 
+            department: "Engineering", 
+            photoUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
+            email: "alex.johnson@example.com"
+          },
+          { 
+            id: "2", 
+            name: "Emma Wilson", 
+            position: "Designer", 
+            department: "Product", 
+            photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" 
+          }
+        ];
+        setEmployees(mockEmployees);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to load employees. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }

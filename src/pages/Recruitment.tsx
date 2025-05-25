@@ -1,19 +1,15 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarContent } from "@/components/SidebarContent";
-import { RightSidebar } from "@/components/RightSidebar";
 import { RecruitmentOverview } from "@/components/recruitment/RecruitmentOverview";
 import { RecruitmentDetailPanel } from "@/components/recruitment/RecruitmentDetailPanel";
 
 export default function Recruitment() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [activeModule, setActiveModule] = useState<string>("Recruitment");
   const [activeSection, setActiveSection] = useState<string>("job-requisition");
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const toggleRightSidebar = () => setRightSidebarOpen(!rightSidebarOpen);
   
   return (
     <div className="min-h-screen bg-background">
@@ -41,9 +37,7 @@ export default function Recruitment() {
         )}
         
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${
-          rightSidebarOpen ? 'lg:mr-72' : ''
-        }`}>
+        <main className="flex-1 transition-all duration-300">
           <div className="container px-4 py-6">
             {/* Welcome Section */}
             <section className="mb-8">
@@ -65,9 +59,6 @@ export default function Recruitment() {
             <RecruitmentDetailPanel activeSection={activeSection} />
           </div>
         </main>
-        
-        {/* Right Sidebar */}
-        <RightSidebar isOpen={rightSidebarOpen} onToggle={toggleRightSidebar} />
       </div>
     </div>
   );

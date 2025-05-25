@@ -1,81 +1,58 @@
 from datetime import datetime, timedelta
+from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from typing import Annotated
-import logging
+from fastapi.security import OAuth2PasswordBearer
 
 from app.models import TokenData, MOCK_USERS
+from app.config import config
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-# Configuration
-SECRET_KEY = "YOUR_SECRET_KEY_HERE"  # Should be in env variables in production
+# Security configuration
+SECRET_KEY = config.get("security.secret_key", "your-secret-key-for-development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
 
-# OAuth2 scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash."""
+    return pwd_context.verify(plain_password, hashed_password)
 
-def verify_password(plain_password, hashed_password):
-    try:
-        logger.debug(f"Verifying password. Plain: {plain_password}, Hashed: {hashed_password}")
-        result = pwd_context.verify(plain_password, hashed_password)
-        logger.debug(f"Password verification result: {result}")
-        return result
-    except Exception as e:
-        logger.error(f"Error verifying password: {str(e)}")
-        return False
-
-def get_password_hash(password):
+def get_password_hash(password: str) -> str:
+    """Generate password hash."""
     return pwd_context.hash(password)
 
-def authenticate_user(email: str, password: str):
-    try:
-        logger.debug(f"Attempting to authenticate user: {email}")
-        user = MOCK_USERS.get(email)
-        if not user:
-            logger.debug(f"User not found: {email}")
-            return False
-        
-        logger.debug(f"Found user: {user}")
-        logger.debug(f"Stored hash: {user['hashed_password']}")
-        
-        # For testing, let's directly compare the passwords
-        if password == "user123" and email == "user@example.com":
-            logger.debug("Direct password match for user")
-            return user
-        if password == "admin123" and email == "admin@example.com":
-            logger.debug("Direct password match for admin")
-            return user
-            
-        if not verify_password(password, user["hashed_password"]):
-            logger.debug(f"Invalid password for user: {email}")
-            return False
-        
-        logger.debug(f"Successfully authenticated user: {email}")
-        return user
-    except Exception as e:
-        logger.error(f"Error in authenticate_user: {str(e)}")
-        return False
+def get_user(username: str) -> Optional[dict]:
+    """Get user from database."""
+    if username in MOCK_USERS:
+        user_dict = MOCK_USERS[username]
+        return user_dict
+    return None
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def authenticate_user(username: str, password: str) -> Optional[dict]:
+    """Authenticate a user."""
+    user = get_user(username)
+    if not user:
+        return None
+    if not verify_password(password, user["hashed_password"]):
+        return None
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create access token."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+    """Get current user from token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -83,14 +60,19 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    
-    user = MOCK_USERS.get(token_data.email)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
-    return user 
+    return user
+
+async def get_current_active_user(current_user: dict = Depends(get_current_user)) -> dict:
+    """Get current active user."""
+    if not current_user["is_active"]:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user 

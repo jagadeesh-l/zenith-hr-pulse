@@ -11,10 +11,14 @@ database:
     employees: "employees"
     users: "users"
 
+server:
+  host: "0.0.0.0"
+  port: 8000
+
 security:
-  jwt_secret: "your-super-secret-key-change-this-in-production"
-  jwt_algorithm: "HS256"
-  token_expire_minutes: 60
+  secret_key: "your-secret-key-for-development-replace-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
 
 cors:
   allow_origins:

@@ -1,4 +1,3 @@
-
 import { 
   Calendar, 
   Users, 
@@ -13,11 +12,14 @@ import {
   TrendingUp, 
   HelpCircle,
   Star,
-  Folders
+  Folders,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 type ModuleButtonProps = {
   icon: React.ReactNode;
@@ -25,13 +27,14 @@ type ModuleButtonProps = {
   active?: boolean;
   to?: string;
   onClick?: () => void;
+  isCollapsed?: boolean;
 }
 
-const ModuleButton = ({ icon, label, active, to, onClick }: ModuleButtonProps) => {
+const ModuleButton = ({ icon, label, active, to, onClick, isCollapsed }: ModuleButtonProps) => {
   const content = (
     <>
       {icon}
-      <span>{label}</span>
+      {!isCollapsed && <span className="transition-all duration-200">{label}</span>}
     </>
   );
 
@@ -40,9 +43,11 @@ const ModuleButton = ({ icon, label, active, to, onClick }: ModuleButtonProps) =
       variant="ghost"
       asChild
       className={cn(
-        "w-full justify-start gap-3 mb-1 px-4",
+        "w-full justify-start gap-3 mb-1",
+        isCollapsed ? "px-2" : "px-4",
         active ? "bg-accent" : "hover:bg-accent/50"
       )}
+      title={isCollapsed ? label : undefined}
     >
       <Link to={to}>{content}</Link>
     </Button>
@@ -51,9 +56,11 @@ const ModuleButton = ({ icon, label, active, to, onClick }: ModuleButtonProps) =
       variant="ghost"
       onClick={onClick}
       className={cn(
-        "w-full justify-start gap-3 mb-1 px-4",
+        "w-full justify-start gap-3 mb-1",
+        isCollapsed ? "px-2" : "px-4",
         active ? "bg-accent" : "hover:bg-accent/50"
       )}
+      title={isCollapsed ? label : undefined}
     >
       {content}
     </Button>
@@ -66,6 +73,23 @@ type SidebarContentProps = {
 }
 
 export function SidebarContent({ activeModule, onModuleChange }: SidebarContentProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState) {
+      setIsCollapsed(JSON.parse(savedState));
+    }
+  }, []);
+
+  // Save collapsed state to localStorage
+  const toggleCollapse = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
+  };
+
   const handleModuleClick = (moduleName: string) => {
     if (onModuleChange) {
       onModuleChange(moduleName);
@@ -89,11 +113,35 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
   ];
 
   return (
-    <div className="py-4 h-full flex flex-col">
-      <div className="px-4 mb-4">
-        <h2 className="font-semibold text-lg text-center">HR Modules</h2>
+    <div 
+      className={cn(
+        "py-4 h-full flex flex-col relative transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Collapse Toggle Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute -right-3 top-6 h-6 w-6 rounded-full border bg-background shadow-md"
+        onClick={toggleCollapse}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </Button>
+
+      <div className={cn(
+        "px-4 mb-4",
+        isCollapsed && "px-2"
+      )}>
+        {!isCollapsed && (
+          <h2 className="font-semibold text-lg text-center">HR Modules</h2>
+        )}
       </div>
-      
+
       <div className="flex-1 overflow-auto px-2">
         {modules.map((module) => (
           <ModuleButton 
@@ -103,6 +151,7 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
             active={activeModule === module.name}
             to={module.to}
             onClick={() => handleModuleClick(module.name)}
+            isCollapsed={isCollapsed}
           />
         ))}
       </div>

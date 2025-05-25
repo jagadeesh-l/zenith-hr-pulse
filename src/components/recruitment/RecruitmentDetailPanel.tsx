@@ -1,4 +1,3 @@
-
 import { JobRequisition } from "@/components/recruitment/sections/JobRequisition";
 import { JobPosting } from "@/components/recruitment/sections/JobPosting";
 import { ResumeParser } from "@/components/recruitment/sections/ResumeParser";
@@ -25,8 +24,6 @@ export function RecruitmentDetailPanel({ activeSection }: RecruitmentDetailPanel
         return <ResumeParser />;
       case "candidate-bot":
         return <CandidateBot />;
-      case "interview":
-        return <InterviewScheduler />;
       case "offer":
         return <OfferEngine />;
       case "onboarding":

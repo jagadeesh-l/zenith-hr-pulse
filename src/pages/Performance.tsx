@@ -1,17 +1,13 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarContent } from "@/components/SidebarContent";
-import { RightSidebar } from "@/components/RightSidebar";
 import { PerformanceOverview } from "@/components/performance/PerformanceOverview";
 
 export default function Performance() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [activeModule, setActiveModule] = useState<string>("Performance");
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const toggleRightSidebar = () => setRightSidebarOpen(!rightSidebarOpen);
   
   return (
     <div className="min-h-screen bg-background">
@@ -39,25 +35,20 @@ export default function Performance() {
         )}
         
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${
-          rightSidebarOpen ? 'lg:mr-72' : ''
-        }`}>
+        <main className="flex-1 transition-all duration-300">
           <div className="container px-6 py-8">
             {/* Welcome Section */}
             <section className="mb-8">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-                Performance Management
+                Performance
               </h1>
-              <p className="text-muted-foreground">AI-powered insights to drive exceptional performance</p>
+              <p className="text-muted-foreground">Track, analyze, and improve employee performance with powerful AI-driven insights</p>
             </section>
             
             {/* Performance Overview */}
             <PerformanceOverview />
           </div>
         </main>
-        
-        {/* Right Sidebar */}
-        <RightSidebar isOpen={rightSidebarOpen} onToggle={toggleRightSidebar} />
       </div>
     </div>
   );

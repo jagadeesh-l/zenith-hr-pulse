@@ -37,6 +37,15 @@ async def health_check():
 async def root():
     return {"message": f"Welcome to {config.get('app.name')}"}
 
+# Add global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    print(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An internal server error occurred"}
+    )
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app", 

@@ -1,25 +1,18 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarContent } from "@/components/SidebarContent";
-import { RightSidebar } from "@/components/RightSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Share2, MessageSquare, Star, ListOrdered, Clock, Award } from "lucide-react";
+import { BarChart3, Trophy, Zap, BookOpen, Megaphone, Lightbulb } from "lucide-react";
 import { GameSection } from "@/components/engagement/GameSection";
 import { SurveySection } from "@/components/engagement/SurveySection";
 import { CodeChallengeSection } from "@/components/engagement/CodeChallengeSection";
 
 export default function Engagement() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("games");
+  const [activeModule, setActiveModule] = useState<string>("Engagement");
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const toggleRightSidebar = () => setRightSidebarOpen(!rightSidebarOpen);
-
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -32,7 +25,8 @@ export default function Engagement() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 lg:static lg:z-0`}>
           <SidebarContent 
-            activeModule="Engagement"
+            activeModule={activeModule} 
+            onModuleChange={setActiveModule} 
           />
         </aside>
         
@@ -45,57 +39,47 @@ export default function Engagement() {
         )}
         
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${
-          rightSidebarOpen ? 'lg:mr-72' : ''
-        }`}>
-          <div className="container px-4 py-6">
+        <main className="flex-1 transition-all duration-300">
+          <div className="container px-6 py-8">
             {/* Welcome Section */}
             <section className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">Engagement</h1>
-              <p className="text-muted-foreground">Boost team morale and productivity through interactive activities.</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+                Employee Engagement
+              </h1>
+              <p className="text-muted-foreground">Drive employee engagement with interactive activities and recognition</p>
             </section>
             
-            {/* Tabs */}
-            <Tabs defaultValue="games" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-8 bg-muted/50">
-                <TabsTrigger value="games" className="flex items-center gap-2">
-                  <Award size={16} />
-                  <span>Games</span>
+            {/* Engagement Tabs */}
+            <Tabs defaultValue="games" className="w-full">
+              <TabsList className="mb-8 flex flex-wrap h-auto">
+                <TabsTrigger value="games" className="h-10">
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Games & Challenges
                 </TabsTrigger>
-                <TabsTrigger value="surveys" className="flex items-center gap-2">
-                  <MessageSquare size={16} />
-                  <span>Survey Creation</span>
+                <TabsTrigger value="challenges" className="h-10">
+                  <Zap className="w-4 h-4 mr-2" />
+                  Code Challenges
                 </TabsTrigger>
-                <TabsTrigger value="code" className="flex items-center gap-2">
-                  <ListOrdered size={16} />
-                  <span>Code Challenge</span>
+                <TabsTrigger value="surveys" className="h-10">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Surveys
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="games" className="animate-fade-in">
+              <TabsContent value="games">
                 <GameSection />
               </TabsContent>
               
-              <TabsContent value="surveys" className="animate-fade-in">
-                <SurveySection />
+              <TabsContent value="challenges">
+                <CodeChallengeSection />
               </TabsContent>
               
-              <TabsContent value="code" className="animate-fade-in">
-                <CodeChallengeSection />
+              <TabsContent value="surveys">
+                <SurveySection />
               </TabsContent>
             </Tabs>
           </div>
         </main>
-        
-        {/* Right Sidebar */}
-        <RightSidebar isOpen={rightSidebarOpen} onToggle={toggleRightSidebar} />
-      </div>
-      
-      {/* Floating Chat Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button className="bg-gradient-hr-primary w-12 h-12 rounded-full shadow-lg hover:shadow-primary/20">
-          <MessageSquare className="w-5 h-5" />
-        </Button>
       </div>
     </div>
   );
