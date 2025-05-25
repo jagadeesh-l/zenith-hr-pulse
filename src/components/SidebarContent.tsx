@@ -1,3 +1,4 @@
+
 import { 
   Calendar, 
   Users, 
@@ -33,33 +34,43 @@ type ModuleButtonProps = {
 const ModuleButton = ({ icon, label, active, to, onClick, isCollapsed }: ModuleButtonProps) => {
   const content = (
     <>
-      {icon}
-      {!isCollapsed && <span className="transition-all duration-200">{label}</span>}
+      <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+        {icon}
+      </div>
+      <span className={cn(
+        "transition-all duration-300 ease-in-out text-sm font-medium whitespace-nowrap",
+        isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto ml-3"
+      )}>
+        {label}
+      </span>
     </>
+  );
+
+  const buttonClass = cn(
+    "relative w-full flex items-center transition-all duration-300 ease-in-out",
+    "hover:bg-accent/80 hover:text-accent-foreground",
+    "focus-visible:ring-2 focus-visible:ring-primary/50",
+    "group border-0 bg-transparent shadow-none",
+    isCollapsed ? "justify-center px-3 py-3" : "justify-start px-4 py-3",
+    active ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
   );
 
   return to ? (
     <Button
       variant="ghost"
       asChild
-      className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
-      )}
+      className={buttonClass}
       title={isCollapsed ? label : undefined}
     >
-      <Link to={to}>{content}</Link>
+      <Link to={to} className="no-underline">
+        {content}
+      </Link>
     </Button>
   ) : (
     <Button
       variant="ghost"
       onClick={onClick}
-      className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
-      )}
+      className={buttonClass}
       title={isCollapsed ? label : undefined}
     >
       {content}
@@ -115,45 +126,70 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
   return (
     <div 
       className={cn(
-        "py-4 h-full flex flex-col relative transition-all duration-300",
+        "relative h-full flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Collapse Toggle Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -right-3 top-6 h-6 w-6 rounded-full border bg-background shadow-md"
-        onClick={toggleCollapse}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </Button>
-
+      {/* Header */}
       <div className={cn(
-        "px-4 mb-4",
-        isCollapsed && "px-2"
+        "flex items-center transition-all duration-300 ease-in-out border-b border-sidebar-border",
+        isCollapsed ? "justify-center px-3 py-4" : "justify-between px-4 py-4"
       )}>
         {!isCollapsed && (
-          <h2 className="font-semibold text-lg text-center">HR Modules</h2>
+          <h2 className="font-semibold text-lg text-sidebar-foreground transition-all duration-300">
+            HR Modules
+          </h2>
         )}
+        
+        {/* Collapse Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 rounded-full border border-sidebar-border bg-sidebar shadow-sm",
+            "hover:bg-sidebar-accent hover:border-sidebar-accent-foreground/20",
+            "transition-all duration-300 ease-in-out"
+          )}
+          onClick={toggleCollapse}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4 text-sidebar-foreground" />
+          ) : (
+            <ChevronLeft className="h-4 w-4 text-sidebar-foreground" />
+          )}
+        </Button>
       </div>
 
-      <div className="flex-1 overflow-auto px-2">
-        {modules.map((module) => (
-          <ModuleButton 
-            key={module.name}
-            icon={module.icon}
-            label={module.name}
-            active={activeModule === module.name}
-            to={module.to}
-            onClick={() => handleModuleClick(module.name)}
-            isCollapsed={isCollapsed}
-          />
-        ))}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-hidden py-2">
+        <div className={cn(
+          "space-y-1 transition-all duration-300 ease-in-out",
+          isCollapsed ? "px-2" : "px-3"
+        )}>
+          {modules.map((module) => (
+            <ModuleButton 
+              key={module.name}
+              icon={module.icon}
+              label={module.name}
+              active={activeModule === module.name}
+              to={module.to}
+              onClick={() => handleModuleClick(module.name)}
+              isCollapsed={isCollapsed}
+            />
+          ))}
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className={cn(
+        "border-t border-sidebar-border transition-all duration-300 ease-in-out",
+        isCollapsed ? "px-2 py-3" : "px-4 py-3"
+      )}>
+        {!isCollapsed && (
+          <p className="text-xs text-sidebar-foreground/60 text-center transition-all duration-300">
+            HR Portal v2.0
+          </p>
+        )}
       </div>
     </div>
   );
