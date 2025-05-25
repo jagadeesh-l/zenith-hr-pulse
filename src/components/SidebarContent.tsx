@@ -117,8 +117,8 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
     { name: 'Engagement', icon: <Star size={20} />, to: '/engagement' },
     { name: 'Organization', icon: <Layout size={20} /> },
     { name: 'Resource Hub', icon: <Folders size={20} />, to: '/resource-hub' },
+    { name: 'Compensation', icon: <DollarSign size={20} />, to: '/compensation' },
     { name: 'Reporting', icon: <FileText size={20} /> },
-    { name: 'Compensation', icon: <DollarSign size={20} /> },
     { name: 'Learning', icon: <BookOpen size={20} /> },
     { name: 'Helpdesk', icon: <HelpCircle size={20} /> },
   ];
