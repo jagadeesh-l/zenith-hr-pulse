@@ -14,6 +14,8 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loginClicked, setLoginClicked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showVideo, setShowVideo] = useState(false);
   const navigate = useNavigate();
   
   const introVideoRef = useRef<HTMLVideoElement>(null);
@@ -60,69 +62,42 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    
-    // Password validation
-    if (!password) {
-      toast.error("Please enter your password");
-      return;
-    }
-    
     setIsLoading(true);
-    
+    setError('');
+
     try {
-      // Update the API endpoint to match the backend
+      // Create form data
+      const formData = new FormData();
+      formData.append('username', email); // Note: using 'username' as the field name
+      formData.append('password', password);
+
       const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email,  // Changed from email to username to match backend
-          password
-        }),
+        body: formData, // Send as FormData
+        credentials: 'include',
       });
-      
-      const data = await response.json();
-      
+
       if (!response.ok) {
-        toast.error(data.detail || "Login failed");
-        setIsLoading(false);
-        return;
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Login failed');
       }
-      
-      // Store token in localStorage
-      localStorage.setItem('auth_token', data.access_token);
-      
-      // Set login clicked to start the transition video
-      setLoginClicked(true);
-      
-      // Hide intro video and show login video
-      if (introVideoRef.current) {
-        introVideoRef.current.pause();
-        introVideoRef.current.style.display = 'none';
-      }
-      
-      if (loginVideoRef.current) {
-        loginVideoRef.current.style.display = 'block';
-        
-        // Try to play the video, but if it fails, navigate anyway
-        loginVideoRef.current.play().catch(err => {
-          console.error("Could not play login video:", err);
-          navigate("/dashboard");
-        });
-      }
-      
-      toast.success("Login successful! Redirecting to dashboard...");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Connection error. Please try again.");
+
+      const data = await response.json();
+      localStorage.setItem('token', data.access_token);
+
+      // Show video after successful login
+      setShowVideo(true);
+
+      // Play the video
+      setTimeout(() => {
+        if (loginVideoRef.current) {
+          loginVideoRef.current.play().catch(() => {
+            navigate('/dashboard');
+          });
+        }
+      }, 100); // slight delay to ensure video is rendered
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
     }
   };
@@ -180,7 +155,7 @@ export default function Login() {
               ref={loginVideoRef}
               muted
               className="w-full h-full object-cover absolute inset-0"
-              style={{ display: 'none' }}
+              style={{ display: showVideo ? 'block' : 'none' }}
             >
               <source src="/src/video/after login.mp4" type="video/mp4" />
               Your browser does not support the video tag.

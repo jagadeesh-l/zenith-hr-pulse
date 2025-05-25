@@ -113,9 +113,11 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
           <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
             <span className="text-white font-bold text-sm">HR</span>
           </div>
-          <h2 className="ml-3 font-bold text-xl text-teal-600 dark:text-teal-400">
-            HR Portal
-          </h2>
+          {/* {!isCollapsed && (
+            <h2 className="ml-3 font-bold text-xl text-teal-600 dark:text-teal-400 transition-all duration-300 animate-fade-in">
+              HR Portal
+            </h2>
+          )} */}
         </div>
       </div>
 
