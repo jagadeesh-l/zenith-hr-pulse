@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { MenuIcon, BellIcon, Search } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type HeaderProps = {
-  onMenuToggle: () => void;
+  onMenuToggle?: () => void;
 }
 
 export function Header({ onMenuToggle }: HeaderProps) {
@@ -31,14 +32,16 @@ export function Header({ onMenuToggle }: HeaderProps) {
     )}>
       <div className="container px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onMenuToggle} 
-            className="lg:hidden hover:bg-accent/80 transition-colors duration-200"
-          >
-            <MenuIcon className="w-5 h-5" />
-          </Button>
+          {onMenuToggle && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onMenuToggle} 
+              className="lg:hidden hover:bg-accent/80 transition-colors duration-200"
+            >
+              <MenuIcon className="w-5 h-5" />
+            </Button>
+          )}
           
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
