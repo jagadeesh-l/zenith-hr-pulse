@@ -1,3 +1,4 @@
+
 import { 
   Calendar, 
   Users, 
@@ -12,14 +13,11 @@ import {
   TrendingUp, 
   HelpCircle,
   Star,
-  Folders,
-  ChevronLeft,
-  ChevronRight
+  Folders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 
 type ModuleButtonProps = {
   icon: React.ReactNode;
@@ -27,44 +25,56 @@ type ModuleButtonProps = {
   active?: boolean;
   to?: string;
   onClick?: () => void;
-  isCollapsed?: boolean;
 }
 
-const ModuleButton = ({ icon, label, active, to, onClick, isCollapsed }: ModuleButtonProps) => {
+const ModuleButton = ({ icon, label, active, to, onClick }: ModuleButtonProps) => {
   const content = (
     <>
-      {icon}
-      {!isCollapsed && <span className="transition-all duration-200">{label}</span>}
+      <div className="flex items-center justify-center w-6 h-6 flex-shrink-0 transition-colors duration-200">
+        {icon}
+      </div>
+      <span className="ml-3 text-sm font-medium whitespace-nowrap">
+        {label}
+      </span>
     </>
   );
 
-  return to ? (
+  const buttonClass = cn(
+    "relative w-full flex items-center justify-start px-4 py-3 h-12 transition-all duration-200 ease-in-out group",
+    "hover:bg-teal-50 dark:hover:bg-teal-900/20 focus-visible:ring-2 focus-visible:ring-teal-500/50",
+    "border-0 bg-transparent shadow-none rounded-lg",
+    active 
+      ? "bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400" 
+      : "text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400"
+  );
+
+  const buttonElement = to ? (
     <Button
       variant="ghost"
       asChild
-      className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
-      )}
-      title={isCollapsed ? label : undefined}
+      className={buttonClass}
     >
-      <Link to={to}>{content}</Link>
+      <Link to={to} className="no-underline">
+        {content}
+        {active && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal-500 rounded-r-full animate-scale-in" />
+        )}
+      </Link>
     </Button>
   ) : (
     <Button
       variant="ghost"
       onClick={onClick}
-      className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
-      )}
-      title={isCollapsed ? label : undefined}
+      className={buttonClass}
     >
       {content}
+      {active && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal-500 rounded-r-full animate-scale-in" />
+      )}
     </Button>
   );
+
+  return buttonElement;
 };
 
 type SidebarContentProps = {
@@ -73,23 +83,6 @@ type SidebarContentProps = {
 }
 
 export function SidebarContent({ activeModule, onModuleChange }: SidebarContentProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebarCollapsed');
-    if (savedState) {
-      setIsCollapsed(JSON.parse(savedState));
-    }
-  }, []);
-
-  // Save collapsed state to localStorage
-  const toggleCollapse = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
-  };
-
   const handleModuleClick = (moduleName: string) => {
     if (onModuleChange) {
       onModuleChange(moduleName);
@@ -97,63 +90,63 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
   };
 
   const modules = [
-    { name: 'Dashboard', icon: <Layout size={20} />, to: '/dashboard' },
-    { name: 'Directory', icon: <Users size={20} />, to: '/directory' },
-    { name: 'Leave', icon: <Calendar size={20} />, to: '/leave' },
-    { name: 'Recruitment', icon: <UserPlus size={20} />, to: '/recruitment' },
-    { name: 'Performance', icon: <BarChart2 size={20} />, to: '/performance' },
-    { name: 'Analytics', icon: <TrendingUp size={20} /> },
-    { name: 'Engagement', icon: <Star size={20} />, to: '/engagement' },
-    { name: 'Organization', icon: <Layout size={20} /> },
-    { name: 'Resource Hub', icon: <Folders size={20} />, to: '/resource-hub' },
-    { name: 'Reporting', icon: <FileText size={20} /> },
-    { name: 'Compensation', icon: <DollarSign size={20} /> },
-    { name: 'Learning', icon: <BookOpen size={20} /> },
-    { name: 'Helpdesk', icon: <HelpCircle size={20} /> },
+    { name: 'Dashboard', icon: <Layout size={24} />, to: '/dashboard' },
+    { name: 'Directory', icon: <Users size={24} />, to: '/directory' },
+    { name: 'Leave', icon: <Calendar size={24} />, to: '/leave' },
+    { name: 'Recruitment', icon: <UserPlus size={24} />, to: '/recruitment' },
+    { name: 'Performance', icon: <BarChart2 size={24} />, to: '/performance' },
+    { name: 'Analytics', icon: <TrendingUp size={24} /> },
+    { name: 'Engagement', icon: <Star size={24} />, to: '/engagement' },
+    { name: 'Organization', icon: <Layout size={24} /> },
+    { name: 'Resource Hub', icon: <Folders size={24} />, to: '/resource-hub' },
+    { name: 'Compensation', icon: <DollarSign size={24} />, to: '/compensation' },
+    { name: 'Reporting', icon: <FileText size={24} /> },
+    { name: 'Learning', icon: <BookOpen size={24} /> },
+    { name: 'Helpdesk', icon: <HelpCircle size={24} /> },
   ];
 
   return (
-    <div 
-      className={cn(
-        "py-4 h-full flex flex-col relative transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Collapse Toggle Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -right-3 top-6 h-6 w-6 rounded-full border bg-background shadow-md"
-        onClick={toggleCollapse}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </Button>
-
-      <div className={cn(
-        "px-4 mb-4",
-        isCollapsed && "px-2"
-      )}>
-        {!isCollapsed && (
-          <h2 className="font-semibold text-lg text-center">HR Modules</h2>
-        )}
+    <div className="w-60 h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-start px-6 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
+            <span className="text-white font-bold text-sm">HR</span>
+          </div>
+          {/* {!isCollapsed && (
+            <h2 className="ml-3 font-bold text-xl text-teal-600 dark:text-teal-400 transition-all duration-300 animate-fade-in">
+              HR Portal
+            </h2>
+          )} */}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-2">
-        {modules.map((module) => (
-          <ModuleButton 
-            key={module.name}
-            icon={module.icon}
-            label={module.name}
-            active={activeModule === module.name}
-            to={module.to}
-            onClick={() => handleModuleClick(module.name)}
-            isCollapsed={isCollapsed}
-          />
-        ))}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-hidden py-4">
+        <div className="space-y-1 px-4">
+          {modules.map((module, index) => (
+            <div
+              key={module.name}
+              className="animate-fade-in"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <ModuleButton 
+                icon={module.icon}
+                label={module.name}
+                active={activeModule === module.name}
+                to={module.to}
+                onClick={() => handleModuleClick(module.name)}
+              />
+            </div>
+          ))}
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-slate-50 dark:bg-slate-800/50">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          HR Portal v2.0
+        </p>
       </div>
     </div>
   );

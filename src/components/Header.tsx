@@ -1,19 +1,18 @@
-
 import { useState, useEffect } from "react";
 import { MenuIcon, BellIcon, Search } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type HeaderProps = {
-  onMenuToggle: () => void;
+  onMenuToggle?: () => void;
 }
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [username, setUsername] = useState("John Doe");
   
-  // Add scroll listener to change header appearance when scrolled
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -24,43 +23,47 @@ export function Header({ onMenuToggle }: HeaderProps) {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-30 w-full transition-all duration-300 ${
-      scrolled ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm' : 'bg-transparent'
-    }`}>
-      <div className="container px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={onMenuToggle} className="mr-2 lg:hidden">
-            <MenuIcon className="w-5 h-5" />
-          </Button>
+    <header className={cn(
+      "sticky top-0 z-30 w-full transition-all duration-300",
+      "bg-background border-b",
+      scrolled ? "shadow-sm" : ""
+    )}>
+      <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-4 flex-1">
+          {onMenuToggle && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onMenuToggle} 
+              className="lg:hidden"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </Button>
+          )}
           
-          <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gradient-primary mr-2">HR Portal</h1>
-            <span className="hidden sm:inline-flex text-xs bg-secondary/20 text-secondary px-2 py-1 rounded-full">
-              AI Powered
-            </span>
-          </div>
-        </div>
-        
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search employees, modules, or help..."
-              className="pl-9 bg-muted/50 border-none rounded-full"
+              placeholder="Search modules, employees, or help..."
+              className="pl-9 w-full bg-muted/30 border-muted"
             />
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <BellIcon className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+          >
+            <BellIcon className="h-5 w-5" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary"></span>
           </Button>
           
           <ModeToggle />
           
-          <div className="hidden sm:flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-hr-primary flex items-center justify-center text-white">
+          <div className="hidden sm:flex items-center gap-3 pl-3 border-l">
+            <div className="h-8 w-8 rounded-full bg-gradient-hr-primary flex items-center justify-center text-primary-foreground">
               {username.charAt(0)}
             </div>
             <span className="text-sm font-medium">{username}</span>
