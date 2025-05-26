@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload, TrendingUp, Users } from "lucide-react";
+import { CalendarIcon, Upload, TrendingUp, Users, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -29,13 +29,13 @@ const forecastData = [
   { month: 'Dec', actual: null, forecast: 20 },
 ];
 
-const workflowSteps = [
-  { id: "step-1", title: "Department Request", status: "completed" },
-  { id: "step-2", title: "HR Review", status: "completed" },
-  { id: "step-3", title: "Budget Approval", status: "current" },
-  { id: "step-4", title: "Job Description", status: "pending" },
-  { id: "step-5", title: "Final Approval", status: "pending" },
-];
+type StepStatus = "pending" | "approved" | "declined" | "current";
+
+interface WorkflowStep {
+  id: string;
+  title: string;
+  status: StepStatus;
+}
 
 const departments = ["Engineering", "Product", "Operations", "HR", "Finance", "Marketing", "Sales"];
 const hrTeamMembers = ["Sarah Johnson", "Mike Chen", "Emily Davis", "John Rodriguez"];
@@ -43,6 +43,9 @@ const budgetOwners = ["CFO - Michael Thompson", "VP Finance - Lisa Wang", "Direc
 const finalApprovers = ["CEO - Robert Smith", "COO - Jennifer Brown", "VP Operations - Alex Martinez"];
 
 export function JobRequisition() {
+  const [requisition, setRequisition] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [headcount, setHeadcount] = useState<number[]>([28]);
   const [requestedDate, setRequestedDate] = useState<Date>();
   const [budgetStartDate, setBudgetStartDate] = useState<Date>();
@@ -51,13 +54,86 @@ export function JobRequisition() {
   const [openPositions, setOpenPositions] = useState<number>(12);
   const [closedPositions, setClosedPositions] = useState<number>(8);
   const [finalDecision, setFinalDecision] = useState<string>("approved");
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
+    { id: "step-1", title: "Department Request", status: "current" },
+    { id: "step-2", title: "HR Review", status: "pending" },
+    { id: "step-3", title: "Budget Approval", status: "pending" },
+    { id: "step-4", title: "Job Description", status: "pending" },
+    { id: "step-5", title: "Final Approval", status: "pending" },
+  ]);
+  const [expandedStep, setExpandedStep] = useState<string | null>("step-1");
+  const [showNewRequest, setShowNewRequest] = useState(false);
   
+  // Fetch requisition data
+  useEffect(() => {
+    const fetchRequisition = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/job-requisitions/latest');
+        const data = await response.json();
+        setRequisition(data);
+      } catch (err) {
+        setError('Failed to fetch requisition data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequisition();
+  }, []);
+
   const handleFinalApproval = () => {
     if (finalDecision === "approved") {
       setOpenPositions(prev => prev + 1);
     }
   };
   
+  const handleStepClick = (stepId: string) => {
+    const stepIndex = workflowSteps.findIndex(step => step.id === stepId);
+    const previousStep = workflowSteps[stepIndex - 1];
+    
+    // Only allow expanding if previous step is approved or it's the first step
+    if (stepIndex === 0 || (previousStep && previousStep.status === "approved")) {
+      setExpandedStep(expandedStep === stepId ? null : stepId);
+    }
+  };
+
+  const handleApproval = (stepId: string, action: "approve" | "decline") => {
+    setWorkflowSteps(prevSteps => {
+      const newSteps = [...prevSteps];
+      const currentIndex = newSteps.findIndex(step => step.id === stepId);
+      
+      // Update current step status
+      newSteps[currentIndex] = {
+        ...newSteps[currentIndex],
+        status: action === "approve" ? "approved" : "declined"
+      };
+
+      // If approved, set next step as current
+      if (action === "approve" && currentIndex < newSteps.length - 1) {
+        newSteps[currentIndex + 1] = {
+          ...newSteps[currentIndex + 1],
+          status: "current"
+        };
+        setExpandedStep(newSteps[currentIndex + 1].id);
+      }
+
+      return newSteps;
+    });
+  };
+
+  const handleNewRequest = () => {
+    setWorkflowSteps([
+      { id: "step-1", title: "Department Request", status: "current" },
+      { id: "step-2", title: "HR Review", status: "pending" },
+      { id: "step-3", title: "Budget Approval", status: "pending" },
+      { id: "step-4", title: "Job Description", status: "pending" },
+      { id: "step-5", title: "Final Approval", status: "pending" },
+    ]);
+    setExpandedStep("step-1");
+    setShowNewRequest(false);
+  };
+
   const renderWorkflowForm = (stepId: string, stepTitle: string) => {
     switch (stepId) {
       case "step-1":
@@ -299,100 +375,122 @@ export function JobRequisition() {
     }
   };
   
-  return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-6">AI-Driven Job Requisition & Forecasting</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Left Column - Approval Workflow */}
-        <div>
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Approval Workflow</h3>
-              
-              <div className="space-y-6">
-                <div className="relative">
-                  {/* Vertical line connecting steps */}
-                  <div className="absolute left-3 top-3 w-0.5 h-[calc(100%-24px)] bg-muted z-0"></div>
-                  
-                  {/* Workflow steps */}
-                  {workflowSteps.map((step, index) => (
-                    <div key={step.id} className="relative flex items-start z-10 mb-6">
-                      <div className={`size-6 rounded-full flex-shrink-0 flex items-center justify-center ${
-                        step.status === 'completed' ? 'bg-green-500' :
-                        step.status === 'current' ? 'bg-primary' : 'bg-muted'
-                      } text-white`}>
-                        {step.status === 'completed' ? '✓' : index + 1}
-                      </div>
-                      
-                      <div className="ml-4 flex-1">
-                        <div className={`p-3 rounded-xl ${
-                          step.status === 'current' ? 'bg-primary/10 border border-primary/30' :
-                          step.status === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
-                          'bg-muted/30 border border-muted'
-                        }`}>
-                          <h4 className="font-medium">{step.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {step.status === 'completed' ? 'Completed' :
-                             step.status === 'current' ? 'In Progress' : 'Waiting'}
-                          </p>
-                        </div>
-                        
-                        {/* Render form for each step */}
-                        {renderWorkflowForm(step.id, step.title)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="pt-4">
-                  <Button variant="outline" className="w-full mb-2" onClick={handleFinalApproval}>
-                    Approve Current Step
-                  </Button>
-                  <Button variant="ghost" className="w-full">View Complete History</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+  const renderWorkflowStep = (step: WorkflowStep, index: number) => {
+    const isActive = step.status === "current";
+    const isApproved = step.status === "approved";
+    const isDeclined = step.status === "declined";
+    const isPending = step.status === "pending";
+    const canShowForm = expandedStep === step.id;
+
+    return (
+      <div key={step.id} className="relative flex items-start z-10 mb-6">
+        <div className={`size-6 rounded-full flex-shrink-0 flex items-center justify-center ${
+          isApproved ? 'bg-green-500' :
+          isDeclined ? 'bg-red-500' :
+          isActive ? 'bg-primary' : 'bg-muted'
+        } text-white`}>
+          {isApproved ? '✓' : index + 1}
         </div>
         
-        {/* Right Column - Headcount Controls */}
-        <div>
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Headcount Controls</h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Headcount Target</span>
-                    <span className="text-sm font-medium">{headcount[0]}</span>
-                  </div>
-                  <Slider
-                    defaultValue={[28]}
-                    max={50}
-                    min={10}
-                    step={1}
-                    value={headcount}
-                    onValueChange={setHeadcount}
-                  />
-                  <div className="flex justify-between mt-1">
-                    <span className="text-xs text-muted-foreground">10</span>
-                    <span className="text-xs text-primary">Auto-suggested: 30</span>
-                    <span className="text-xs text-muted-foreground">50</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <Button className="w-full">Generate Requisition Plan</Button>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    AI will optimize requisitions based on business needs
-                  </p>
-                </div>
+        <div className="ml-4 flex-1">
+          <div 
+            className={`p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+              isActive ? 'bg-primary/10 border border-primary/30' :
+              isApproved ? 'bg-green-500/10 border border-green-500/30' :
+              isDeclined ? 'bg-red-500/10 border border-red-500/30' :
+              'bg-muted/30 border border-muted'
+            }`}
+            onClick={() => handleStepClick(step.id)}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">{step.title}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {isApproved ? 'Approved' :
+                   isDeclined ? 'Declined' :
+                   isActive ? 'In Progress' : 'Waiting'}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+              {canShowForm && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {expandedStep === step.id ? 'Hide Details' : 'View Details'}
+                  </span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      expandedStep === step.id ? 'rotate-180' : ''
+                    }`} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Form and Approval Buttons */}
+          {canShowForm && (
+            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+              {renderWorkflowForm(step.id, step.title)}
+              
+              {/* Approval Buttons */}
+              {isActive && (
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500"
+                    onClick={() => handleApproval(step.id, "decline")}
+                  >
+                    Decline
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-green-500 hover:bg-green-600"
+                    onClick={() => handleApproval(step.id, "approve")}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">AI-Driven Job Requisition & Forecasting</h2>
+        <Button 
+          onClick={() => setShowNewRequest(true)}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          New Request
+        </Button>
+      </div>
+      
+      {/* Approval Workflow */}
+      <div className="mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-medium mb-4">Approval Workflow</h3>
+            
+            <div className="space-y-6">
+              <div className="relative">
+                {/* Vertical line connecting steps */}
+                <div className="absolute left-3 top-3 w-0.5 h-[calc(100%-24px)] bg-muted z-0"></div>
+                
+                {/* Workflow steps */}
+                {workflowSteps.map((step, index) => renderWorkflowStep(step, index))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Position Status Cards */}
