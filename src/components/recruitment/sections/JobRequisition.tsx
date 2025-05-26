@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload } from "lucide-react";
+import { CalendarIcon, Upload, TrendingUp, Users } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -49,6 +49,15 @@ export function JobRequisition() {
   const [budgetStartDate, setBudgetStartDate] = useState<Date>();
   const [budgetEndDate, setBudgetEndDate] = useState<Date>();
   const [effectiveDate, setEffectiveDate] = useState<Date>();
+  const [openPositions, setOpenPositions] = useState<number>(12);
+  const [closedPositions, setClosedPositions] = useState<number>(8);
+  const [finalDecision, setFinalDecision] = useState<string>("approved");
+  
+  const handleFinalApproval = () => {
+    if (finalDecision === "approved") {
+      setOpenPositions(prev => prev + 1);
+    }
+  };
   
   const renderWorkflowForm = (stepId: string, stepTitle: string) => {
     switch (stepId) {
@@ -267,7 +276,7 @@ export function JobRequisition() {
               </div>
               <div className="md:col-span-2">
                 <Label>Overall Decision</Label>
-                <RadioGroup defaultValue="approved" className="flex space-x-4 mt-2">
+                <RadioGroup value={finalDecision} onValueChange={setFinalDecision} className="flex space-x-4 mt-2">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="approved" id="approved" />
                     <Label htmlFor="approved">Approved</Label>
@@ -295,7 +304,7 @@ export function JobRequisition() {
     <div>
       <h2 className="text-2xl font-semibold mb-6">AI-Driven Job Requisition & Forecasting</h2>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Left Column - Approval Workflow */}
         <div>
           <Card>
@@ -338,7 +347,9 @@ export function JobRequisition() {
                 </div>
                 
                 <div className="pt-4">
-                  <Button variant="outline" className="w-full mb-2">Approve Current Step</Button>
+                  <Button variant="outline" className="w-full mb-2" onClick={handleFinalApproval}>
+                    Approve Current Step
+                  </Button>
                   <Button variant="ghost" className="w-full">View Complete History</Button>
                 </div>
               </div>
@@ -385,8 +396,41 @@ export function JobRequisition() {
         </div>
       </div>
       
+      {/* Position Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Current Open Positions</h3>
+                <p className="text-3xl font-bold text-blue-600">{openPositions}</p>
+                <p className="text-sm text-muted-foreground mt-1">Active job openings</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Closed Positions</h3>
+                <p className="text-3xl font-bold text-green-600">{closedPositions}</p>
+                <p className="text-sm text-muted-foreground mt-1">Successfully filled roles</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
       {/* Headcount Forecast - Moved to bottom */}
-      <div className="mt-6">
+      <div>
         <Card>
           <CardContent className="pt-6">
             <h3 className="text-lg font-medium mb-4">Headcount Forecast</h3>
@@ -404,7 +448,7 @@ export function JobRequisition() {
               </ResponsiveContainer>
             </div>
           </CardContent>
-        </Card>
+        </Popover>
       </div>
     </div>
   );
