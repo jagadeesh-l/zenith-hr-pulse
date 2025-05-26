@@ -45,9 +45,19 @@ export function ImportEmployees({ isOpen, onClose }: ImportEmployeesProps) {
       return;
     }
 
-    const success = await importEmployeesFromCsv(file);
-    if (success) {
-      onClose();
+    try {
+      const success = await importEmployeesFromCsv(file);
+      if (success) {
+        setFile(null); // Reset file input
+        onClose();
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import failed",
+        description: "An error occurred while importing employees.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -167,4 +177,4 @@ export function ImportEmployees({ isOpen, onClose }: ImportEmployeesProps) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

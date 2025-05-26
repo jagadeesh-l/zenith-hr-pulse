@@ -13,7 +13,12 @@ SECRET_KEY = config.get("security.secret_key", "your-secret-key-for-development"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Update CryptContext configuration
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12  # Explicitly set rounds
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -36,9 +41,13 @@ def authenticate_user(username: str, password: str) -> Optional[dict]:
     user = get_user(username)
     if not user:
         return None
-    if not verify_password(password, user["hashed_password"]):
+    try:
+        if not verify_password(password, user["hashed_password"]):
+            return None
+        return user
+    except Exception as e:
+        logger.error(f"Password verification error: {str(e)}")
         return None
-    return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create access token."""
@@ -75,4 +84,4 @@ async def get_current_active_user(current_user: dict = Depends(get_current_user)
     """Get current active user."""
     if not current_user["is_active"]:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user 
+    return current_user

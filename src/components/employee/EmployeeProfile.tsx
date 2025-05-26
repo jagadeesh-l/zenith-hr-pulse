@@ -44,14 +44,44 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setPhoto(e.target.files[0]);
-      // Create a preview URL
-      setProfileData(prev => ({
-        ...prev,
-        photoUrl: URL.createObjectURL(e.target.files[0])
-      }));
+      const file = e.target.files[0];
+      setPhoto(file);
+      
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        const response = await fetch('http://localhost:8000/api/employees/upload-photo', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+        
+        const data = await response.json();
+        // Update the photo URL with the one returned from server
+        setProfileData(prev => ({
+          ...prev,
+          photoUrl: data.photo_url
+        }));
+        
+        toast({
+          title: "Success",
+          description: "Photo uploaded successfully",
+        });
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        toast({
+          title: "Error",
+          description: "Failed to upload photo",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -115,10 +145,13 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                   src={profileData.photoUrl} 
                   alt={profileData.name} 
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // If image fails to load, show fallback
+                    console.error('Error loading image:', e);
+                    setProfileData(prev => ({ ...prev, photoUrl: '' }));
+                  }}
                 />
-              ) : (
-                getInitialsAvatar(profileData.name)
-              )}
+              ) : getInitialsAvatar(profileData.name)}
               
               {isEditing && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -284,4 +317,4 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
       </DialogContent>
     </Dialog>
   );
-} 
+}

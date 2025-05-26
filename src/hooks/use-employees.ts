@@ -137,22 +137,23 @@ export function useEmployees() {
   // Create a new employee
   const createEmployee = async (employeeData: Omit<Employee, 'id'>): Promise<Employee | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/employees`, {
+      // Create FormData for multipart/form-data submission
+      const formData = new FormData();
+      
+      // Append all employee data to FormData
+      Object.entries(employeeData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (key === 'photoUrl' && value instanceof File) {
+            formData.append('photo', value); // Change to 'photo' to match backend
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+
+      const response = await fetch(`${API_BASE_URL}/employees/create`, {  // Updated endpoint
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: employeeData.name,
-          position: employeeData.position,
-          department: employeeData.department,
-          email: employeeData.email,
-          phone: employeeData.phone,
-          bio: employeeData.bio,
-          start_date: employeeData.startDate,
-          photo_url: employeeData.photoUrl,
-          skills: employeeData.skills || []
-        }),
+        body: formData, // Use FormData instead of JSON
       });
       
       if (!response.ok) {
@@ -197,21 +198,27 @@ export function useEmployees() {
   // Update an existing employee
   const updateEmployee = async (id: string, employeeData: Partial<Employee>): Promise<Employee | null> => {
     try {
+      // Format the date to ISO string format if it exists
+      const formattedData = {
+        ...employeeData,
+        start_date: employeeData.startDate ? new Date(employeeData.startDate).toISOString().split('T')[0] : undefined,
+      };
+
       const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: employeeData.name,
-          position: employeeData.position,
-          department: employeeData.department,
-          email: employeeData.email,
-          phone: employeeData.phone,
-          bio: employeeData.bio,
-          start_date: employeeData.startDate,
-          photo_url: employeeData.photoUrl,
-          skills: employeeData.skills
+          name: formattedData.name,
+          position: formattedData.position,
+          department: formattedData.department,
+          email: formattedData.email,
+          phone: formattedData.phone,
+          bio: formattedData.bio,
+          start_date: formattedData.start_date,
+          photo_url: formattedData.photoUrl,
+          skills: formattedData.skills
         }),
       });
       
@@ -292,7 +299,7 @@ export function useEmployees() {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(`${API_BASE_URL}/employees/import-csv`, {
+      const response = await fetch(`${API_BASE_URL}/employees/import`, {  // Changed endpoint
         method: 'POST',
         body: formData,
       });
@@ -304,18 +311,19 @@ export function useEmployees() {
       const result = await response.json();
       
       // Refresh employee list
-      fetchEmployees();
+      await fetchEmployees();  // Added await
       
       toast({
         title: 'Import successful',
-        description: `${result.inserted} employees have been imported.`,
+        description: `${result.inserted || result.successful_imports} employees have been imported.`,  // Handle both response formats
       });
       
       return true;
     } catch (err) {
+      console.error('Import error:', err);  // Added error logging
       toast({
         title: 'Import failed',
-        description: 'Failed to import employees from CSV.',
+        description: 'Failed to import employees. Please check the file format.',
         variant: 'destructive',
       });
       return false;

@@ -1,8 +1,10 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
 from passlib.context import CryptContext
+import bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Update the CryptContext configuration
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 
 class Token(BaseModel):
     access_token: str
@@ -60,4 +62,4 @@ MOCK_USERS: Dict[str, dict] = {
         "is_active": True,
         "is_admin": False
     }
-} 
+}

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -21,34 +20,35 @@ export function EmployeeHierarchy({ employees }: EmployeeHierarchyProps) {
   const departments = [...new Set(employees.map(emp => emp.department))];
   
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-6">
       {departments.map((department) => (
-        <Card key={department} className="overflow-hidden">
-          <div className="bg-muted px-4 py-3 font-medium">
+        <Card key={department} className="w-full overflow-hidden">
+          <div className="bg-muted px-6 py-4 font-medium">
             {department} Department
           </div>
-          <CardContent className="pt-6">
+          <CardContent className="pt-8">
             <div className="flex flex-col items-center">
               {/* Department head - just using the first employee of that department for this example */}
               {employees.filter(emp => emp.department === department).slice(0, 1).map((head) => (
-                <div key={head.id} className="flex flex-col items-center mb-8">
-                  <Avatar className="h-16 w-16 mb-2">
+                <div key={head.id} className="flex flex-col items-center mb-12">
+                  <Avatar className="h-20 w-20 mb-3">
                     <AvatarImage src={head.photoUrl} alt={head.name} />
-                    <AvatarFallback className="text-lg">{head.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-xl">{head.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="text-center">
-                    <h3 className="font-medium">{head.name}</h3>
+                    <h3 className="text-lg font-medium">{head.name}</h3>
                     <p className="text-sm text-muted-foreground">{head.position}</p>
                   </div>
                   
-                  <div className="w-px h-8 bg-border mt-4"></div>
+                  <div className="w-px h-12 bg-border mt-6"></div>
                 </div>
               ))}
               
-              <div className="grid grid-cols-3 gap-8 w-full">
+              {/* Team members */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 w-full">
                 {employees.filter(emp => emp.department === department).slice(1).map((employee) => (
                   <div key={employee.id} className="flex flex-col items-center">
-                    <Avatar className="h-12 w-12 mb-2">
+                    <Avatar className="h-16 w-16 mb-3">
                       <AvatarImage src={employee.photoUrl} alt={employee.name} />
                       <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
                     </Avatar>

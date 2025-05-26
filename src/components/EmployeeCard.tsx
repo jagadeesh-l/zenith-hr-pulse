@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { EmployeeProfile } from "./employee/EmployeeProfile";
@@ -28,39 +27,43 @@ export function EmployeeCard(props: EmployeeCardProps) {
       .join('')
       .toUpperCase();
     
-    // Hero-themed background colors
+    // Use consistent color based on name
     const colors = [
       'bg-red-500', 'bg-blue-600', 'bg-green-500', 
       'bg-purple-600', 'bg-yellow-500', 'bg-pink-500'
     ];
+    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
     
-    // Use name to deterministically pick a color
-    const colorIndex = props.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-    
-    return (
-      <div className={`${colors[colorIndex]} w-full h-full flex items-center justify-center text-white text-4xl font-bold`}>
-        {initials}
-      </div>
-    );
+    return colors[colorIndex];
   };
 
   return (
     <>
-      <div 
-        className={cn(
-          "group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-border hr-card-hover animate-fade-in",
-          props.className
-        )}
-      >
+      <div className={cn("group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden", props.className)}>
         <div className="aspect-square overflow-hidden">
           {props.photoUrl ? (
             <img 
               src={props.photoUrl} 
-              alt={props.name} 
+              alt={props.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                // If image fails to load, replace with initials avatar
+                const target = e.target as HTMLImageElement;
+                const parent = target.parentElement;
+                if (parent) {
+                  const color = getInitialsAvatar(props.name);
+                  parent.innerHTML = `
+                    <div class="${color} w-full h-full flex items-center justify-center text-white text-4xl font-bold">
+                      ${props.name.split(' ').map(part => part[0]).join('').toUpperCase()}
+                    </div>
+                  `;
+                }
+              }}
             />
           ) : (
-            getInitialsAvatar(props.name)
+            <div className={`${getInitialsAvatar(props.name)} w-full h-full flex items-center justify-center text-white text-4xl font-bold`}>
+              {props.name.split(' ').map(part => part[0]).join('').toUpperCase()}
+            </div>
           )}
         </div>
         <div className="p-3 text-center">
