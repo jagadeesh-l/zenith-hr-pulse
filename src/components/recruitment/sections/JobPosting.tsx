@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Switch } from "@/components/ui/switch";
 import { Check, Eye, Send, Wand2 } from "lucide-react";
 
 const performanceData = [
@@ -66,6 +67,12 @@ export function JobPosting() {
   });
   const [activeVariant, setActiveVariant] = useState<string>("variant1");
   const [publishReady, setPublishReady] = useState<boolean>(false);
+  const [distributionChannels, setDistributionChannels] = useState({
+    linkedin: true,
+    indeed: true,
+    glassdoor: true,
+    companyWebsite: true
+  });
   
   const handlePositionSelect = (position: typeof openPositions[0]) => {
     setSelectedPosition(position);
@@ -92,6 +99,13 @@ export function JobPosting() {
         "Strong technical foundation with relevant experience or education"
       ]
     });
+  };
+
+  const handleChannelToggle = (channel: keyof typeof distributionChannels) => {
+    setDistributionChannels(prev => ({
+      ...prev,
+      [channel]: !prev[channel]
+    }));
   };
   
   return (
@@ -297,53 +311,44 @@ export function JobPosting() {
           </Card>
         </div>
         
-        {/* Right Column - Performance Analytics */}
+        {/* Right Column - Distribution Channels Only */}
         <div>
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Distribution Performance</h3>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={performanceData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="variant1" name="Variant A" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="variant2" name="Variant B" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="mt-4 text-sm">
-                <div className="flex justify-between mb-1">
-                  <span>Total Views:</span>
-                  <span className="font-medium">184</span>
-                </div>
-                <div className="flex justify-between mb-1">
-                  <span>Click-Through Rate:</span>
-                  <span className="font-medium">8.2%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Applications Started:</span>
-                  <span className="font-medium">32</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">Distribution Channels</h3>
               
               <div className="space-y-3">
-                {["LinkedIn", "Indeed", "Glassdoor", "Company Website"].map((channel) => (
-                  <div key={channel} className="flex items-center justify-between p-3 border rounded-lg">
-                    <span>{channel}</span>
-                    <input type="checkbox" defaultChecked className="w-4 h-4" />
-                  </div>
-                ))}
+                <div 
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                  onClick={() => handleChannelToggle('linkedin')}
+                >
+                  <span>LinkedIn</span>
+                  <Switch checked={distributionChannels.linkedin} />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                  onClick={() => handleChannelToggle('indeed')}
+                >
+                  <span>Indeed</span>
+                  <Switch checked={distributionChannels.indeed} />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                  onClick={() => handleChannelToggle('glassdoor')}
+                >
+                  <span>Glassdoor</span>
+                  <Switch checked={distributionChannels.glassdoor} />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                  onClick={() => handleChannelToggle('companyWebsite')}
+                >
+                  <span>Company Website</span>
+                  <Switch checked={distributionChannels.companyWebsite} />
+                </div>
                 
                 <div className="pt-4">
                   <Button 
