@@ -238,6 +238,18 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
+                {/* Update Button for autofill */}
+                <Button
+                  type="button"
+                  className="w-full mb-2 bg-blue-500 hover:bg-blue-600"
+                  onClick={() => {
+                    setEmail('user@example.com');
+                    setPassword('user123');
+                  }}
+                  disabled={isLoading || loginClicked}
+                >
+                  Update
+                </Button>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
