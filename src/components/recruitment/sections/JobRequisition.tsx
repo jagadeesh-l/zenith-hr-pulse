@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload, TrendingUp, Users, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Upload, TrendingUp, Users, Plus, X, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -29,7 +32,7 @@ const forecastData = [
   { month: 'Dec', actual: null, forecast: 20 },
 ];
 
-type StepStatus = "pending" | "approved" | "declined" | "current";
+type StepStatus = "pending" | "approved" | "declined" | "current" | "in-progress";
 
 interface WorkflowStep {
   id: string;
@@ -37,85 +40,88 @@ interface WorkflowStep {
   status: StepStatus;
 }
 
+interface JobRequisitionData {
+  jobTitle: string;
+  department: string;
+  manager: string;
+  numberOfOpenings: number;
+  jobType: string;
+  location: string;
+  skills: string[];
+  experienceLevel: string;
+  educationRequirements: string;
+  salaryMin: number;
+  salaryMax: number;
+  reasonForHire: string;
+  startDate: Date | undefined;
+  notes: string;
+}
+
 const departments = ["Engineering", "Product", "Operations", "HR", "Finance", "Marketing", "Sales"];
-const hrTeamMembers = ["Sarah Johnson", "Mike Chen", "Emily Davis", "John Rodriguez"];
-const budgetOwners = ["CFO - Michael Thompson", "VP Finance - Lisa Wang", "Director Finance - David Kim"];
-const finalApprovers = ["CEO - Robert Smith", "COO - Jennifer Brown", "VP Operations - Alex Martinez"];
+const managers = ["Sarah Johnson", "Mike Chen", "Emily Davis", "John Rodriguez", "Lisa Wang", "David Kim"];
+const jobTypes = ["Full-time", "Part-time", "Contract", "Intern"];
+const locationTypes = ["Office", "Remote", "Hybrid"];
+const experienceLevels = ["Entry Level (0-2 years)", "Mid Level (3-5 years)", "Senior Level (6-10 years)", "Executive Level (10+ years)"];
+const educationLevels = ["High School", "Associate Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Professional Certification"];
+const reasonsForHire = ["New Role", "Replacement", "Team Expansion", "Seasonal", "Project-based"];
 
 export function JobRequisition() {
-  const [requisition, setRequisition] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [headcount, setHeadcount] = useState<number[]>([28]);
-  const [requestedDate, setRequestedDate] = useState<Date>();
-  const [budgetStartDate, setBudgetStartDate] = useState<Date>();
-  const [budgetEndDate, setBudgetEndDate] = useState<Date>();
-  const [effectiveDate, setEffectiveDate] = useState<Date>();
   const [openPositions, setOpenPositions] = useState<number>(12);
   const [closedPositions, setClosedPositions] = useState<number>(8);
-  const [finalDecision, setFinalDecision] = useState<string>("approved");
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
-    { id: "step-1", title: "Department Request", status: "current" },
+    { id: "step-1", title: "Department Request", status: "in-progress" },
     { id: "step-2", title: "HR Review", status: "pending" },
     { id: "step-3", title: "Budget Approval", status: "pending" },
-    { id: "step-4", title: "Job Description", status: "pending" },
-    { id: "step-5", title: "Final Approval", status: "pending" },
+    { id: "step-4", title: "Final Approval", status: "pending" },
   ]);
   const [expandedStep, setExpandedStep] = useState<string | null>("step-1");
-  const [showNewRequest, setShowNewRequest] = useState(false);
+  const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
   
-  // Fetch requisition data
-  useEffect(() => {
-    const fetchRequisition = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/job-requisitions/latest');
-        const data = await response.json();
-        setRequisition(data);
-      } catch (err) {
-        setError('Failed to fetch requisition data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequisition();
-  }, []);
-
-  const handleFinalApproval = () => {
-    if (finalDecision === "approved") {
-      setOpenPositions(prev => prev + 1);
-    }
-  };
+  // New Request Form State
+  const [newRequest, setNewRequest] = useState<JobRequisitionData>({
+    jobTitle: "",
+    department: "",
+    manager: "",
+    numberOfOpenings: 1,
+    jobType: "",
+    location: "",
+    skills: [],
+    experienceLevel: "",
+    educationRequirements: "",
+    salaryMin: 50000,
+    salaryMax: 100000,
+    reasonForHire: "",
+    startDate: undefined,
+    notes: ""
+  });
+  const [currentSkill, setCurrentSkill] = useState("");
   
   const handleStepClick = (stepId: string) => {
-    const stepIndex = workflowSteps.findIndex(step => step.id === stepId);
-    const previousStep = workflowSteps[stepIndex - 1];
-    
-    // Only allow expanding if previous step is approved or it's the first step
-    if (stepIndex === 0 || (previousStep && previousStep.status === "approved")) {
-      setExpandedStep(expandedStep === stepId ? null : stepId);
-    }
+    setExpandedStep(expandedStep === stepId ? null : stepId);
   };
 
-  const handleApproval = (stepId: string, action: "approve" | "decline") => {
+  const handleApproval = (stepId: string, action: "approve" | "decline" | "request-info" | "submit") => {
     setWorkflowSteps(prevSteps => {
       const newSteps = [...prevSteps];
       const currentIndex = newSteps.findIndex(step => step.id === stepId);
       
-      // Update current step status
-      newSteps[currentIndex] = {
-        ...newSteps[currentIndex],
-        status: action === "approve" ? "approved" : "declined"
-      };
-
-      // If approved, set next step as current
-      if (action === "approve" && currentIndex < newSteps.length - 1) {
-        newSteps[currentIndex + 1] = {
-          ...newSteps[currentIndex + 1],
-          status: "current"
-        };
-        setExpandedStep(newSteps[currentIndex + 1].id);
+      if (action === "submit" && stepId === "step-1") {
+        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "approved" };
+        newSteps[currentIndex + 1] = { ...newSteps[currentIndex + 1], status: "current" };
+        setExpandedStep("step-2");
+      } else if (action === "approve") {
+        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "approved" };
+        if (currentIndex < newSteps.length - 1) {
+          newSteps[currentIndex + 1] = { ...newSteps[currentIndex + 1], status: "current" };
+          setExpandedStep(newSteps[currentIndex + 1].id);
+        }
+      } else if (action === "decline") {
+        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "declined" };
+      } else if (action === "request-info") {
+        newSteps[0] = { ...newSteps[0], status: "current" };
+        setExpandedStep("step-1");
       }
 
       return newSteps;
@@ -123,250 +129,260 @@ export function JobRequisition() {
   };
 
   const handleNewRequest = () => {
+    setNewRequest({
+      jobTitle: "",
+      department: "",
+      manager: "",
+      numberOfOpenings: 1,
+      jobType: "",
+      location: "",
+      skills: [],
+      experienceLevel: "",
+      educationRequirements: "",
+      salaryMin: 50000,
+      salaryMax: 100000,
+      reasonForHire: "",
+      startDate: undefined,
+      notes: ""
+    });
     setWorkflowSteps([
-      { id: "step-1", title: "Department Request", status: "current" },
+      { id: "step-1", title: "Department Request", status: "in-progress" },
       { id: "step-2", title: "HR Review", status: "pending" },
       { id: "step-3", title: "Budget Approval", status: "pending" },
-      { id: "step-4", title: "Job Description", status: "pending" },
-      { id: "step-5", title: "Final Approval", status: "pending" },
+      { id: "step-4", title: "Final Approval", status: "pending" },
     ]);
     setExpandedStep("step-1");
-    setShowNewRequest(false);
+    setShowNewRequestDialog(true);
   };
 
-  const renderWorkflowForm = (stepId: string, stepTitle: string) => {
+  const addSkill = () => {
+    if (currentSkill.trim() && !newRequest.skills.includes(currentSkill.trim())) {
+      setNewRequest(prev => ({
+        ...prev,
+        skills: [...prev.skills, currentSkill.trim()]
+      }));
+      setCurrentSkill("");
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setNewRequest(prev => ({
+      ...prev,
+      skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }));
+  };
+
+  const saveNewRequest = () => {
+    // Save the request data
+    setShowNewRequestDialog(false);
+    console.log("New request saved:", newRequest);
+  };
+
+  const renderStepActions = (stepId: string, stepTitle: string) => {
+    const step = workflowSteps.find(s => s.id === stepId);
+    if (!step) return null;
+
     switch (stepId) {
       case "step-1":
         return (
-          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-gray-50">
-            <h4 className="font-medium text-sm">{stepTitle} Form</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="department">Department</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept.toLowerCase()}>{dept}</SelectItem>
+          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-blue-50">
+            <h4 className="font-medium text-sm">{stepTitle} - Request Details</h4>
+            
+            {/* Display populated form data */}
+            {newRequest.jobTitle && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><strong>Job Title:</strong> {newRequest.jobTitle}</div>
+                <div><strong>Department:</strong> {newRequest.department}</div>
+                <div><strong>Manager:</strong> {newRequest.manager}</div>
+                <div><strong>Openings:</strong> {newRequest.numberOfOpenings}</div>
+                <div><strong>Job Type:</strong> {newRequest.jobType}</div>
+                <div><strong>Location:</strong> {newRequest.location}</div>
+                <div className="md:col-span-2">
+                  <strong>Skills:</strong> 
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {newRequest.skills.map(skill => (
+                      <Badge key={skill} variant="secondary">{skill}</Badge>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
+                <div><strong>Experience:</strong> {newRequest.experienceLevel}</div>
+                <div><strong>Education:</strong> {newRequest.educationRequirements}</div>
+                <div><strong>Salary Range:</strong> ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
+                <div><strong>Reason:</strong> {newRequest.reasonForHire}</div>
+                {newRequest.startDate && (
+                  <div><strong>Start Date:</strong> {format(newRequest.startDate, "PPP")}</div>
+                )}
+                {newRequest.notes && (
+                  <div className="md:col-span-2"><strong>Notes:</strong> {newRequest.notes}</div>
+                )}
               </div>
-              <div>
-                <Label htmlFor="requestor">Requestor Name & Email</Label>
-                <Input value="John Doe (john.doe@company.com)" disabled className="bg-gray-100" />
+            )}
+
+            {step.status === "in-progress" && (
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => console.log("Save Draft")}
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="text-red-500 hover:bg-red-50"
+                  onClick={() => console.log("Cancel Request")}
+                >
+                  Cancel Request
+                </Button>
+                <Button 
+                  className="bg-blue-500 hover:bg-blue-600"
+                  onClick={() => handleApproval(stepId, "submit")}
+                  disabled={!newRequest.jobTitle}
+                >
+                  Submit for HR Review
+                </Button>
               </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="justification">Justification</Label>
-                <Textarea placeholder="Provide justification for this request..." />
-              </div>
-              <div>
-                <Label>Requested Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !requestedDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {requestedDate ? format(requestedDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={requestedDate} onSelect={setRequestedDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
+            )}
           </div>
         );
       
       case "step-2":
         return (
-          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-gray-50">
-            <h4 className="font-medium text-sm">{stepTitle} Form</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="hr-reviewer">HR Reviewer</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select HR reviewer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hrTeamMembers.map((member) => (
-                      <SelectItem key={member} value={member.toLowerCase().replace(' ', '-')}>{member}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Review Decision</Label>
-                <RadioGroup defaultValue="approve" className="flex space-x-4 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="approve" id="approve" />
-                    <Label htmlFor="approve">Approve</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="send-back" id="send-back" />
-                    <Label htmlFor="send-back">Send Back</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="hr-comments">Comments</Label>
+          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-green-50">
+            <h4 className="font-medium text-sm">{stepTitle} - Review & Action</h4>
+            
+            <div className="space-y-3">
+              <Button variant="outline" className="w-full justify-start">
+                <FileText className="w-4 h-4 mr-2" />
+                Review Details
+              </Button>
+              
+              <div className="space-y-2">
+                <Label htmlFor="hr-comments">Comments/Reason</Label>
                 <Textarea placeholder="Add review comments..." />
               </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="attachments">Attachments</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Upload org charts, policy docs, etc.</p>
-                  <Button variant="outline" className="mt-2">Choose Files</Button>
-                </div>
-              </div>
             </div>
+            
+            {step.status === "current" && (
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  className="text-orange-500 hover:bg-orange-50"
+                  onClick={() => handleApproval(stepId, "request-info")}
+                >
+                  Request More Information
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="text-red-500 hover:bg-red-50"
+                  onClick={() => handleApproval(stepId, "decline")}
+                >
+                  Reject
+                </Button>
+                <Button 
+                  className="bg-green-500 hover:bg-green-600"
+                  onClick={() => handleApproval(stepId, "approve")}
+                >
+                  Approve & Forward to Budget
+                </Button>
+              </div>
+            )}
           </div>
         );
       
       case "step-3":
         return (
-          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-blue-50">
-            <h4 className="font-medium text-sm">{stepTitle} Form</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="budget-owner">Budget Owner</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select budget owner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {budgetOwners.map((owner) => (
-                      <SelectItem key={owner} value={owner.toLowerCase().replace(/[^a-z]/g, '-')}>{owner}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="budget-amount">Approved Budget Amount</Label>
-                <div className="flex">
-                  <Select defaultValue="usd">
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="usd">USD</SelectItem>
-                      <SelectItem value="eur">EUR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input type="number" placeholder="Amount" className="flex-1 ml-2" />
+          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-yellow-50">
+            <h4 className="font-medium text-sm">{stepTitle} - Budget Review</h4>
+            
+            <div className="space-y-3">
+              <div className="p-3 bg-white rounded border">
+                <div className="text-sm">
+                  <strong>Budget Impact Analysis</strong>
+                  <div className="mt-2">
+                    <div>Requested Salary Range: ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
+                    <div>Number of Positions: {newRequest.numberOfOpenings}</div>
+                    <div>Annual Cost Estimate: ${(newRequest.salaryMax * newRequest.numberOfOpenings).toLocaleString()}</div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label>Budget Period Start</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !budgetStartDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {budgetStartDate ? format(budgetStartDate, "PPP") : "Start date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={budgetStartDate} onSelect={setBudgetStartDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Label>Budget Period End</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !budgetEndDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {budgetEndDate ? format(budgetEndDate, "PPP") : "End date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={budgetEndDate} onSelect={setBudgetEndDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="budget-comments">Comments</Label>
-                <Textarea placeholder="Add budget approval comments..." />
+              
+              <div className="space-y-2">
+                <Label htmlFor="budget-comments">Budget Comments</Label>
+                <Textarea placeholder="Add budget review comments..." />
               </div>
             </div>
+            
+            {step.status === "current" && (
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  className="text-orange-500 hover:bg-orange-50"
+                  onClick={() => handleApproval(stepId, "request-info")}
+                >
+                  Request Revisions
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="text-red-500 hover:bg-red-50"
+                  onClick={() => handleApproval(stepId, "decline")}
+                >
+                  Reject
+                </Button>
+                <Button 
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                  onClick={() => handleApproval(stepId, "approve")}
+                >
+                  Approve Budget
+                </Button>
+              </div>
+            )}
           </div>
         );
       
       case "step-4":
         return (
-          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-gray-50">
-            <h4 className="font-medium text-sm">{stepTitle} Form</h4>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="position-title">Position Title</Label>
-                <Input placeholder="Enter position title..." />
-              </div>
-              <div>
-                <Label htmlFor="job-description">Job Description</Label>
-                <Textarea 
-                  placeholder="Enter detailed job description..." 
-                  className="min-h-[120px]"
-                />
-                <p className="text-sm text-gray-500 mt-1">Use rich text formatting for detailed job descriptions</p>
-              </div>
-            </div>
-          </div>
-        );
-      
-      case "step-5":
-        return (
-          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-gray-50">
-            <h4 className="font-medium text-sm">{stepTitle} Form</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="final-approver">Final Approver</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select final approver" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {finalApprovers.map((approver) => (
-                      <SelectItem key={approver} value={approver.toLowerCase().replace(/[^a-z]/g, '-')}>{approver}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Effective Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !effectiveDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {effectiveDate ? format(effectiveDate, "PPP") : "Pick effective date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={effectiveDate} onSelect={setEffectiveDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="md:col-span-2">
-                <Label>Overall Decision</Label>
-                <RadioGroup value={finalDecision} onValueChange={setFinalDecision} className="flex space-x-4 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="approved" id="approved" />
-                    <Label htmlFor="approved">Approved</Label>
+          <div className="space-y-4 mt-4 p-4 border rounded-lg bg-purple-50">
+            <h4 className="font-medium text-sm">{stepTitle} - Final Review</h4>
+            
+            <div className="space-y-3">
+              <div className="p-3 bg-white rounded border">
+                <div className="text-sm">
+                  <strong>Complete Request Summary</strong>
+                  <div className="mt-2 space-y-1">
+                    <div>Position: {newRequest.jobTitle} ({newRequest.numberOfOpenings} opening{newRequest.numberOfOpenings > 1 ? 's' : ''})</div>
+                    <div>Department: {newRequest.department}</div>
+                    <div>Budget: ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
+                    <div>Type: {newRequest.jobType} | Location: {newRequest.location}</div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="denied" id="denied" />
-                    <Label htmlFor="denied">Denied</Label>
-                  </div>
-                </RadioGroup>
+                </div>
               </div>
-              <div className="md:col-span-2">
+              
+              <div className="space-y-2">
                 <Label htmlFor="final-comments">Final Comments</Label>
                 <Textarea placeholder="Add final approval comments..." />
               </div>
             </div>
+            
+            {step.status === "current" && (
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  className="text-red-500 hover:bg-red-50"
+                  onClick={() => handleApproval(stepId, "decline")}
+                >
+                  Final Reject
+                </Button>
+                <Button 
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={() => {
+                    handleApproval(stepId, "approve");
+                    setOpenPositions(prev => prev + newRequest.numberOfOpenings);
+                  }}
+                >
+                  Final Approve & Initiate Posting
+                </Button>
+              </div>
+            )}
           </div>
         );
       
@@ -377,6 +393,7 @@ export function JobRequisition() {
   
   const renderWorkflowStep = (step: WorkflowStep, index: number) => {
     const isActive = step.status === "current";
+    const isInProgress = step.status === "in-progress";
     const isApproved = step.status === "approved";
     const isDeclined = step.status === "declined";
     const isPending = step.status === "pending";
@@ -387,7 +404,7 @@ export function JobRequisition() {
         <div className={`size-6 rounded-full flex-shrink-0 flex items-center justify-center ${
           isApproved ? 'bg-green-500' :
           isDeclined ? 'bg-red-500' :
-          isActive ? 'bg-primary' : 'bg-muted'
+          isActive || isInProgress ? 'bg-primary' : 'bg-muted'
         } text-white`}>
           {isApproved ? '✓' : index + 1}
         </div>
@@ -395,7 +412,7 @@ export function JobRequisition() {
         <div className="ml-4 flex-1">
           <div 
             className={`p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-              isActive ? 'bg-primary/10 border border-primary/30' :
+              isActive || isInProgress ? 'bg-primary/10 border border-primary/30' :
               isApproved ? 'bg-green-500/10 border border-green-500/30' :
               isDeclined ? 'bg-red-500/10 border border-red-500/30' :
               'bg-muted/30 border border-muted'
@@ -408,54 +425,30 @@ export function JobRequisition() {
                 <p className="text-sm text-muted-foreground">
                   {isApproved ? 'Approved' :
                    isDeclined ? 'Declined' :
-                   isActive ? 'In Progress' : 'Waiting'}
+                   isActive ? 'Current Step' :
+                   isInProgress ? 'In Progress' : 'Waiting'}
                 </p>
               </div>
-              {canShowForm && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {expandedStep === step.id ? 'Hide Details' : 'View Details'}
-                  </span>
-                  <svg 
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      expandedStep === step.id ? 'rotate-180' : ''
-                    }`} 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {expandedStep === step.id ? 'Hide Details' : 'View Details'}
+                </span>
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    expandedStep === step.id ? 'rotate-180' : ''
+                  }`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
           
-          {/* Form and Approval Buttons */}
-          {canShowForm && (
-            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-              {renderWorkflowForm(step.id, step.title)}
-              
-              {/* Approval Buttons */}
-              {isActive && (
-                <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500"
-                    onClick={() => handleApproval(step.id, "decline")}
-                  >
-                    Decline
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-green-500 hover:bg-green-600"
-                    onClick={() => handleApproval(step.id, "approve")}
-                  >
-                    Approve
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Step Actions */}
+          {canShowForm && renderStepActions(step.id, step.title)}
         </div>
       </div>
     );
@@ -466,13 +459,228 @@ export function JobRequisition() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">AI-Driven Job Requisition & Forecasting</h2>
         <Button 
-          onClick={() => setShowNewRequest(true)}
+          onClick={handleNewRequest}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
           New Request
         </Button>
       </div>
+
+      {/* New Request Dialog */}
+      <Dialog open={showNewRequestDialog} onOpenChange={setShowNewRequestDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Job Requisition</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="jobTitle">Job Title *</Label>
+                <Input 
+                  id="jobTitle"
+                  value={newRequest.jobTitle}
+                  onChange={(e) => setNewRequest(prev => ({...prev, jobTitle: e.target.value}))}
+                  placeholder="e.g., Senior Software Engineer"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="department">Department *</Label>
+                <Select value={newRequest.department} onValueChange={(value) => setNewRequest(prev => ({...prev, department: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="manager">Manager/Reporting To *</Label>
+                <Select value={newRequest.manager} onValueChange={(value) => setNewRequest(prev => ({...prev, manager: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.map((manager) => (
+                      <SelectItem key={manager} value={manager}>{manager}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="numberOfOpenings">Number of Openings *</Label>
+                <Input 
+                  id="numberOfOpenings"
+                  type="number"
+                  min="1"
+                  value={newRequest.numberOfOpenings}
+                  onChange={(e) => setNewRequest(prev => ({...prev, numberOfOpenings: parseInt(e.target.value) || 1}))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="jobType">Job Type *</Label>
+                <Select value={newRequest.jobType} onValueChange={(value) => setNewRequest(prev => ({...prev, jobType: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="location">Location *</Label>
+                <Select value={newRequest.location} onValueChange={(value) => setNewRequest(prev => ({...prev, location: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locationTypes.map((location) => (
+                      <SelectItem key={location} value={location}>{location}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="experienceLevel">Experience Level *</Label>
+                <Select value={newRequest.experienceLevel} onValueChange={(value) => setNewRequest(prev => ({...prev, experienceLevel: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select experience level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experienceLevels.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="educationRequirements">Education Requirements</Label>
+                <Select value={newRequest.educationRequirements} onValueChange={(value) => setNewRequest(prev => ({...prev, educationRequirements: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select education level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {educationLevels.map((education) => (
+                      <SelectItem key={education} value={education}>{education}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Skills Section */}
+            <div>
+              <Label htmlFor="skills">Required Skills & Qualifications</Label>
+              <div className="flex gap-2 mt-1">
+                <Input 
+                  value={currentSkill}
+                  onChange={(e) => setCurrentSkill(e.target.value)}
+                  placeholder="Enter a skill..."
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                />
+                <Button type="button" onClick={addSkill} variant="outline">
+                  Add
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {newRequest.skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                    {skill}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => removeSkill(skill)} />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            {/* Salary Range */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="salaryMin">Minimum Salary ($)</Label>
+                <Input 
+                  id="salaryMin"
+                  type="number"
+                  value={newRequest.salaryMin}
+                  onChange={(e) => setNewRequest(prev => ({...prev, salaryMin: parseInt(e.target.value) || 0}))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="salaryMax">Maximum Salary ($)</Label>
+                <Input 
+                  id="salaryMax"
+                  type="number"
+                  value={newRequest.salaryMax}
+                  onChange={(e) => setNewRequest(prev => ({...prev, salaryMax: parseInt(e.target.value) || 0}))}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="reasonForHire">Reason for Hire *</Label>
+                <Select value={newRequest.reasonForHire} onValueChange={(value) => setNewRequest(prev => ({...prev, reasonForHire: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasonsForHire.map((reason) => (
+                      <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Desired Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newRequest.startDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newRequest.startDate ? format(newRequest.startDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={newRequest.startDate} onSelect={(date) => setNewRequest(prev => ({...prev, startDate: date}))} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="notes">Additional Notes</Label>
+              <Textarea 
+                id="notes"
+                value={newRequest.notes}
+                onChange={(e) => setNewRequest(prev => ({...prev, notes: e.target.value}))}
+                placeholder="Any specific requirements, attachments, or additional information..."
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewRequestDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveNewRequest} disabled={!newRequest.jobTitle || !newRequest.department}>
+              Create Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Approval Workflow */}
       <div className="mb-6">
@@ -526,7 +734,7 @@ export function JobRequisition() {
         </Card>
       </div>
       
-      {/* Headcount Forecast - Moved to bottom */}
+      {/* Headcount Forecast */}
       <div>
         <Card>
           <CardContent className="pt-6">
