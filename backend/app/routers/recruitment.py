@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query, Request
 from typing import List, Optional
-from backend.models.recruitment import (
+from ...models.recruitment import (
     JobRequisition, JobRequisitionCreate, JobRequisitionUpdate, 
     JobRequisitionResponse, WorkflowAction, RecruitmentStats, 
     HeadcountForecast, StepStatus
 )
-from backend.services.recruitment_service import RecruitmentService
+from ...services.recruitment_service import RecruitmentService
 import re
 
 router = APIRouter(prefix="/api/recruitment", tags=["recruitment"])

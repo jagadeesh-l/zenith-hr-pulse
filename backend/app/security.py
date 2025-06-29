@@ -5,8 +5,8 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from backend.app.models import TokenData, MOCK_USERS
-from backend.app.config import config
+from .models import TokenData, MOCK_USERS
+from .config import config
 
 # Security configuration
 SECRET_KEY = config.get("security.secret_key", "your-secret-key-for-development")

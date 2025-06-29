@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.app.routers import auth, employees
+from .routers import auth, employees
 
 app = FastAPI(title="ZenithHR API")
 
