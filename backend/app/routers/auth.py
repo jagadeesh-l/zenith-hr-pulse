@@ -5,8 +5,8 @@ from datetime import timedelta
 import logging
 import traceback
 
-from app.models import Token, UserLogin
-from app.security import (
+from backend.app.models import Token, UserLogin
+from backend.app.security import (
     authenticate_user, 
     create_access_token, 
     ACCESS_TOKEN_EXPIRE_MINUTES

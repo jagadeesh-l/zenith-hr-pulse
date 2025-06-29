@@ -4,9 +4,11 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import os
 
-from app.config import config
-from app.routers import employees
-from app.feature_flags import FeatureFlags
+from backend.app.config import config
+from backend.app.routers import employees, recruitment
+from backend.app.feature_flags import FeatureFlags
+from backend.database import init_db
+from backend.database.recruitment_db import recruitment_db
 
 # Create FastAPI app
 app = FastAPI(
@@ -26,6 +28,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(employees.router)
+app.include_router(recruitment.router)
 
 # Health check endpoint
 @app.get("/api/health", tags=["health"])
@@ -45,6 +48,17 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An internal server error occurred"}
     )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connections on startup."""
+    await init_db()
+    await recruitment_db.connect_to_database()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connections on shutdown."""
+    await recruitment_db.close_database_connection()
 
 if __name__ == "__main__":
     uvicorn.run(

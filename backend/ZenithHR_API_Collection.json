@@ -1,0 +1,687 @@
+{
+  "info": {
+    "name": "ZenithHR API Collection",
+    "description": "Complete API collection for ZenithHR Pulse - HR Management System (Recruitment endpoints have authentication disabled for testing)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login with Form Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "user@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "user123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "token"]
+            },
+            "description": "Login using OAuth2 form data format"
+          },
+          "response": []
+        },
+        {
+          "name": "Login with JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user@example.com\",\n  \"password\": \"user123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login using JSON format"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for user login"
+    },
+    {
+      "name": "Health & System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Check if the API is running"
+          },
+          "response": []
+        },
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Get API welcome message"
+          },
+          "response": []
+        }
+      ],
+      "description": "System health and root endpoints"
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/employees?skip=0&limit=100&department=Engineering&search=john",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of records to skip"
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Maximum number of records to return"
+                },
+                {
+                  "key": "department",
+                  "value": "Engineering",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "john",
+                  "description": "Search in name, position, email",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all employees with optional filtering and pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "{{employee_id}}"]
+            },
+            "description": "Get a specific employee by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "John Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "position",
+                  "value": "Software Engineer",
+                  "type": "text"
+                },
+                {
+                  "key": "department",
+                  "value": "Engineering",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "john.doe@company.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+1-555-0123",
+                  "type": "text"
+                },
+                {
+                  "key": "bio",
+                  "value": "Experienced software engineer with 5+ years in web development",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employees/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", ""]
+            },
+            "description": "Create a new employee with optional photo upload"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Updated\",\n  \"position\": \"Senior Software Engineer\",\n  \"department\": \"Engineering\",\n  \"email\": \"john.doe.updated@company.com\",\n  \"phone\": \"+1-555-0124\",\n  \"bio\": \"Updated bio for John Doe\",\n  \"start_date\": \"2023-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "{{employee_id}}"]
+            },
+            "description": "Update an existing employee"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "{{employee_id}}"]
+            },
+            "description": "Delete an employee by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Employee Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Profile Photo",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Employee profile photo",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employees/upload-photo/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "upload-photo", "{{employee_id}}"]
+            },
+            "description": "Upload a photo for a specific employee"
+          },
+          "response": []
+        },
+        {
+          "name": "Import Employees CSV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "overwrite",
+                  "value": "false",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employees/import-csv?overwrite=false",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "import-csv"],
+              "query": [
+                {
+                  "key": "overwrite",
+                  "value": "false",
+                  "description": "Whether to overwrite existing employees"
+                }
+              ]
+            },
+            "description": "Import employees from CSV file"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Test Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/employees/seed-test-data",
+              "host": ["{{base_url}}"],
+              "path": ["api", "employees", "seed-test-data"]
+            },
+            "description": "Seed the database with test employee data"
+          },
+          "response": []
+        }
+      ],
+      "description": "Employee management endpoints (Authentication Required)"
+    },
+    {
+      "name": "Recruitment (No Auth Required)",
+      "item": [
+        {
+          "name": "Create Job Requisition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobTitle\": \"Senior Software Engineer\",\n  \"department\": \"Engineering\",\n  \"manager\": \"Sarah Johnson\",\n  \"numberOfOpenings\": 2,\n  \"jobType\": \"Full-time\",\n  \"location\": \"Remote\",\n  \"skills\": [\"Python\", \"FastAPI\", \"React\", \"MongoDB\"],\n  \"experienceLevel\": \"Senior Level (6-10 years)\",\n  \"educationRequirements\": \"Bachelor's Degree\",\n  \"salaryMin\": 80000,\n  \"salaryMax\": 120000,\n  \"reasonForHire\": \"Team Expansion\",\n  \"startDate\": \"2024-03-01\",\n  \"notes\": \"Looking for experienced full-stack developers\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions"]
+            },
+            "description": "Create a new job requisition (No authentication required for testing)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Job Requisitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions?skip=0&limit=100&status=pending&department=Engineering",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of records to skip"
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Maximum number of records to return"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status (pending, approved, declined, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "Engineering",
+                  "description": "Filter by department",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all job requisitions with optional filtering (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job Requisition by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions/{{requisition_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions", "{{requisition_id}}"]
+            },
+            "description": "Get a specific job requisition by ID (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Job Requisition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobTitle\": \"Senior Software Engineer Updated\",\n  \"numberOfOpenings\": 3,\n  \"salaryMin\": 85000,\n  \"salaryMax\": 130000,\n  \"notes\": \"Updated requirements for the position\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions/{{requisition_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions", "{{requisition_id}}"]
+            },
+            "description": "Update an existing job requisition (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Job Requisition",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions/{{requisition_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions", "{{requisition_id}}"]
+            },
+            "description": "Soft delete a job requisition (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workflow Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\",\n  \"comments\": \"Approved after review\",\n  \"reviewer\": \"hr_manager\",\n  \"attachments\": [\"review_document.pdf\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-requisitions/{{requisition_id}}/workflow/step-2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-requisitions", "{{requisition_id}}", "workflow", "step-2"]
+            },
+            "description": "Update workflow step status (approve, decline, request_info, submit) - No authentication required"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Recruitment Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "stats"]
+            },
+            "description": "Get recruitment statistics and analytics (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Headcount Forecast",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/headcount-forecast",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "headcount-forecast"]
+            },
+            "description": "Get headcount forecast data (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Steps",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/workflow-steps",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "workflow-steps"]
+            },
+            "description": "Get available workflow steps (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Departments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/departments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "departments"]
+            },
+            "description": "Get available departments (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/job-types",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "job-types"]
+            },
+            "description": "Get available job types (No authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Experience Levels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recruitment/experience-levels",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recruitment", "experience-levels"]
+            },
+            "description": "Get available experience levels (No authentication required)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Recruitment and job requisition management endpoints (Authentication temporarily disabled for testing)"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set access token from login response",
+          "if (pm.response && pm.response.code === 200) {",
+          "    const responseJson = pm.response.json();",
+          "    if (responseJson.access_token) {",
+          "        pm.collectionVariables.set('access_token', responseJson.access_token);",
+          "    }",
+          "}",
+          "",
+          "// Set default headers for all requests",
+          "pm.request.headers.add({",
+          "    key: 'Accept',",
+          "    value: 'application/json'",
+          "});"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Common test script for all requests",
+          "pm.test('Status code is 200, 201, or 204', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+          "});",
+          "",
+          "pm.test('Response has required fields', function () {",
+          "    if (pm.response.code !== 204) {",
+          "        const responseJson = pm.response.json();",
+          "        pm.expect(responseJson).to.be.an('object');",
+          "    }",
+          "});",
+          "",
+          "// Store IDs for subsequent requests",
+          "if (pm.response.code === 200 || pm.response.code === 201) {",
+          "    const responseJson = pm.response.json();",
+          "    if (responseJson.id) {",
+          "        pm.collectionVariables.set('employee_id', responseJson.id);",
+          "    }",
+          "    if (responseJson.requisition_id) {",
+          "        pm.collectionVariables.set('requisition_id', responseJson.requisition_id);",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ]
+} 

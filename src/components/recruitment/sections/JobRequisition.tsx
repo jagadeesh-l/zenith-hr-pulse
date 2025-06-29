@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +15,8 @@ import { CalendarIcon, Upload, TrendingUp, Users, Plus, X, FileText } from "luci
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { recruitmentService, JobRequisitionData, JobRequisition as JobRequisitionType, RecruitmentStats, HeadcountForecast } from "@/services/recruitmentService";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const forecastData = [
   { month: 'Jan', actual: 10, forecast: 10 },
@@ -40,23 +41,6 @@ interface WorkflowStep {
   status: StepStatus;
 }
 
-interface JobRequisitionData {
-  jobTitle: string;
-  department: string;
-  manager: string;
-  numberOfOpenings: number;
-  jobType: string;
-  location: string;
-  skills: string[];
-  experienceLevel: string;
-  educationRequirements: string;
-  salaryMin: number;
-  salaryMax: number;
-  reasonForHire: string;
-  startDate: Date | undefined;
-  notes: string;
-}
-
 const departments = ["Engineering", "Product", "Operations", "HR", "Finance", "Marketing", "Sales"];
 const managers = ["Sarah Johnson", "Mike Chen", "Emily Davis", "John Rodriguez", "Lisa Wang", "David Kim"];
 const jobTypes = ["Full-time", "Part-time", "Contract", "Intern"];
@@ -70,6 +54,9 @@ export function JobRequisition() {
   const [error, setError] = useState<string | null>(null);
   const [openPositions, setOpenPositions] = useState<number>(12);
   const [closedPositions, setClosedPositions] = useState<number>(8);
+  const [currentRequisition, setCurrentRequisition] = useState<JobRequisitionType | null>(null);
+  const [recruitmentStats, setRecruitmentStats] = useState<RecruitmentStats | null>(null);
+  const [headcountForecast, setHeadcountForecast] = useState<HeadcountForecast[]>([]);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
     { id: "step-1", title: "Department Request", status: "in-progress" },
     { id: "step-2", title: "HR Review", status: "pending" },
@@ -97,35 +84,99 @@ export function JobRequisition() {
     notes: ""
   });
   const [currentSkill, setCurrentSkill] = useState("");
+  const [drafts, setDrafts] = useState<JobRequisitionData[]>([]);
   
+  // Load initial data
+  useEffect(() => {
+    loadRecruitmentData();
+  }, []);
+
+  // Load drafts from localStorage on mount
+  useEffect(() => {
+    const storedDrafts = localStorage.getItem("jobRequisitionDrafts");
+    if (storedDrafts) {
+      setDrafts(JSON.parse(storedDrafts));
+    }
+  }, []);
+
+  // Save drafts to localStorage whenever drafts change
+  useEffect(() => {
+    localStorage.setItem("jobRequisitionDrafts", JSON.stringify(drafts));
+  }, [drafts]);
+
+  const loadRecruitmentData = async () => {
+    try {
+      setLoading(true);
+      const [stats, forecast] = await Promise.all([
+        recruitmentService.getRecruitmentStats(),
+        recruitmentService.getHeadcountForecast()
+      ]);
+      
+      setRecruitmentStats(stats);
+      setHeadcountForecast(forecast);
+      setOpenPositions(stats.open_positions);
+      setClosedPositions(stats.closed_positions);
+    } catch (error) {
+      console.error("Failed to load recruitment data:", error);
+      setError("Failed to load recruitment data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStepClick = (stepId: string) => {
     setExpandedStep(expandedStep === stepId ? null : stepId);
   };
 
-  const handleApproval = (stepId: string, action: "approve" | "decline" | "request-info" | "submit") => {
-    setWorkflowSteps(prevSteps => {
-      const newSteps = [...prevSteps];
-      const currentIndex = newSteps.findIndex(step => step.id === stepId);
+  const handleApproval = async (stepId: string, action: "approve" | "decline" | "request_info" | "submit") => {
+    if (!currentRequisition) return;
+
+    try {
+      setLoading(true);
       
+      // Call the API to update workflow step
+      const result = await recruitmentService.updateWorkflowStep(
+        currentRequisition.requisition_id,
+        stepId,
+        action
+      );
+
+      // Refresh the current requisition data
+      const updatedRequisition = await recruitmentService.getJobRequisition(currentRequisition.requisition_id);
+      setCurrentRequisition(updatedRequisition);
+
+      // Update workflow steps based on the response
+      if (updatedRequisition.workflow_steps) {
+        setWorkflowSteps(updatedRequisition.workflow_steps.map(step => ({
+          id: step.id,
+          title: step.title,
+          status: step.status as StepStatus
+        })));
+      }
+
+      // Update expanded step
       if (action === "submit" && stepId === "step-1") {
-        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "approved" };
-        newSteps[currentIndex + 1] = { ...newSteps[currentIndex + 1], status: "current" };
         setExpandedStep("step-2");
       } else if (action === "approve") {
-        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "approved" };
-        if (currentIndex < newSteps.length - 1) {
-          newSteps[currentIndex + 1] = { ...newSteps[currentIndex + 1], status: "current" };
-          setExpandedStep(newSteps[currentIndex + 1].id);
+        const currentIndex = workflowSteps.findIndex(step => step.id === stepId);
+        if (currentIndex < workflowSteps.length - 1) {
+          setExpandedStep(workflowSteps[currentIndex + 1].id);
         }
-      } else if (action === "decline") {
-        newSteps[currentIndex] = { ...newSteps[currentIndex], status: "declined" };
-      } else if (action === "request-info") {
-        newSteps[0] = { ...newSteps[0], status: "current" };
+      } else if (action === "request_info") {
         setExpandedStep("step-1");
       }
 
-      return newSteps;
-    });
+      // If final approval, refresh stats
+      if (action === "approve" && stepId === "step-4") {
+        await loadRecruitmentData();
+      }
+
+    } catch (error) {
+      console.error("Failed to update workflow step:", error);
+      setError("Failed to update workflow step");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNewRequest = () => {
@@ -172,15 +223,88 @@ export function JobRequisition() {
     }));
   };
 
-  const saveNewRequest = () => {
-    // Save the request data
+  const saveNewRequest = async () => {
+    try {
+      setLoading(true);
+      // Create the job requisition via API
+      const createdRequisition = await recruitmentService.createJobRequisition(newRequest);
+      // Fetch the full requisition from backend (in case backend adds/normalizes fields)
+      const fetchedRequisition = await recruitmentService.getJobRequisition(createdRequisition.requisition_id);
+      // Set as current requisition
+      setCurrentRequisition(fetchedRequisition);
+      // Update workflow steps based on the response
+      if (fetchedRequisition.workflow_steps) {
+        setWorkflowSteps(fetchedRequisition.workflow_steps.map(step => ({
+          id: step.id,
+          title: step.title,
+          status: step.status as StepStatus
+        })));
+      }
+      // Close dialog and reset form
+      setShowNewRequestDialog(false);
+      setNewRequest({
+        jobTitle: "",
+        department: "",
+        manager: "",
+        numberOfOpenings: 1,
+        jobType: "",
+        location: "",
+        skills: [],
+        experienceLevel: "",
+        educationRequirements: "",
+        salaryMin: 50000,
+        salaryMax: 100000,
+        reasonForHire: "",
+        startDate: undefined,
+        notes: ""
+      });
+      // Refresh stats
+      await loadRecruitmentData();
+    } catch (error) {
+      console.error("Failed to create job requisition:", error);
+      setError("Failed to create job requisition");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save Draft handler
+  const handleSaveDraft = () => {
+    if (!newRequest.jobTitle) return;
+    setDrafts(prev => [{ ...newRequest }, ...prev.filter(d => d.jobTitle !== newRequest.jobTitle)]);
     setShowNewRequestDialog(false);
-    console.log("New request saved:", newRequest);
+    setNewRequest({
+      jobTitle: "",
+      department: "",
+      manager: "",
+      numberOfOpenings: 1,
+      jobType: "",
+      location: "",
+      skills: [],
+      experienceLevel: "",
+      educationRequirements: "",
+      salaryMin: 50000,
+      salaryMax: 100000,
+      reasonForHire: "",
+      startDate: undefined,
+      notes: ""
+    });
+  };
+
+  // Restore draft handler
+  const handleRestoreDraft = (draft: JobRequisitionData) => {
+    setNewRequest(draft);
+    setCurrentRequisition(null);
+    setShowNewRequestDialog(true);
+    setExpandedStep("step-1");
   };
 
   const renderStepActions = (stepId: string, stepTitle: string) => {
     const step = workflowSteps.find(s => s.id === stepId);
     if (!step) return null;
+
+    // Use current requisition data if available, otherwise use new request data
+    const requestData = currentRequisition?.department_request || newRequest;
 
     switch (stepId) {
       case "step-1":
@@ -189,31 +313,37 @@ export function JobRequisition() {
             <h4 className="font-medium text-sm">{stepTitle} - Request Details</h4>
             
             {/* Display populated form data */}
-            {newRequest.jobTitle && (
+            {(requestData.jobTitle || requestData['job_title']) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div><strong>Job Title:</strong> {newRequest.jobTitle}</div>
-                <div><strong>Department:</strong> {newRequest.department}</div>
-                <div><strong>Manager:</strong> {newRequest.manager}</div>
-                <div><strong>Openings:</strong> {newRequest.numberOfOpenings}</div>
-                <div><strong>Job Type:</strong> {newRequest.jobType}</div>
-                <div><strong>Location:</strong> {newRequest.location}</div>
+                <div><strong>Job Title:</strong> {requestData.jobTitle || requestData['job_title']}</div>
+                <div><strong>Department:</strong> {requestData.department}</div>
+                <div><strong>Manager:</strong> {requestData.manager}</div>
+                <div><strong>Openings:</strong> {requestData.numberOfOpenings || requestData['number_of_openings']}</div>
+                <div><strong>Job Type:</strong> {requestData.jobType || requestData['job_type']}</div>
+                <div><strong>Location:</strong> {requestData.location}</div>
                 <div className="md:col-span-2">
                   <strong>Skills:</strong> 
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {newRequest.skills.map(skill => (
+                    {(requestData.skills || []).map((skill: string) => (
                       <Badge key={skill} variant="secondary">{skill}</Badge>
                     ))}
                   </div>
                 </div>
-                <div><strong>Experience:</strong> {newRequest.experienceLevel}</div>
-                <div><strong>Education:</strong> {newRequest.educationRequirements}</div>
-                <div><strong>Salary Range:</strong> ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
-                <div><strong>Reason:</strong> {newRequest.reasonForHire}</div>
-                {newRequest.startDate && (
-                  <div><strong>Start Date:</strong> {format(newRequest.startDate, "PPP")}</div>
+                <div><strong>Experience:</strong> {requestData.experienceLevel || requestData['experience_level']}</div>
+                <div><strong>Education:</strong> {requestData.educationRequirements || requestData['education_requirements']}</div>
+                <div>
+                  <strong>Salary Range:</strong> $
+                  {(requestData.salaryMin || requestData['salary_min'])?.toLocaleString()} - $
+                  {(requestData.salaryMax || requestData['salary_max'])?.toLocaleString()}
+                </div>
+                <div><strong>Reason:</strong> {requestData.reasonForHire || requestData['reason_for_hire']}</div>
+                {(requestData.startDate || requestData['start_date']) && (
+                  <div>
+                    <strong>Start Date:</strong> {format(new Date(requestData.startDate || requestData['start_date']), "PPP")}
+                  </div>
                 )}
-                {newRequest.notes && (
-                  <div className="md:col-span-2"><strong>Notes:</strong> {newRequest.notes}</div>
+                {(requestData.notes) && (
+                  <div className="md:col-span-2"><strong>Notes:</strong> {requestData.notes}</div>
                 )}
               </div>
             )}
@@ -222,9 +352,9 @@ export function JobRequisition() {
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
-                  onClick={() => console.log("Save Draft")}
+                  onClick={() => console.log("Edit")}
                 >
-                  Save Draft
+                  Edit
                 </Button>
                 <Button 
                   variant="outline" 
@@ -236,7 +366,7 @@ export function JobRequisition() {
                 <Button 
                   className="bg-blue-500 hover:bg-blue-600"
                   onClick={() => handleApproval(stepId, "submit")}
-                  disabled={!newRequest.jobTitle}
+                  disabled={!requestData.jobTitle || !currentRequisition}
                 >
                   Submit for HR Review
                 </Button>
@@ -267,7 +397,7 @@ export function JobRequisition() {
                 <Button 
                   variant="outline" 
                   className="text-orange-500 hover:bg-orange-50"
-                  onClick={() => handleApproval(stepId, "request-info")}
+                  onClick={() => handleApproval(stepId, "request_info")}
                 >
                   Request More Information
                 </Button>
@@ -299,9 +429,9 @@ export function JobRequisition() {
                 <div className="text-sm">
                   <strong>Budget Impact Analysis</strong>
                   <div className="mt-2">
-                    <div>Requested Salary Range: ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
-                    <div>Number of Positions: {newRequest.numberOfOpenings}</div>
-                    <div>Annual Cost Estimate: ${(newRequest.salaryMax * newRequest.numberOfOpenings).toLocaleString()}</div>
+                    <div>Requested Salary Range: ${requestData.salaryMin.toLocaleString()} - ${requestData.salaryMax.toLocaleString()}</div>
+                    <div>Number of Positions: {requestData.numberOfOpenings}</div>
+                    <div>Annual Cost Estimate: ${(requestData.salaryMax * requestData.numberOfOpenings).toLocaleString()}</div>
                   </div>
                 </div>
               </div>
@@ -317,7 +447,7 @@ export function JobRequisition() {
                 <Button 
                   variant="outline" 
                   className="text-orange-500 hover:bg-orange-50"
-                  onClick={() => handleApproval(stepId, "request-info")}
+                  onClick={() => handleApproval(stepId, "request_info")}
                 >
                   Request Revisions
                 </Button>
@@ -349,10 +479,10 @@ export function JobRequisition() {
                 <div className="text-sm">
                   <strong>Complete Request Summary</strong>
                   <div className="mt-2 space-y-1">
-                    <div>Position: {newRequest.jobTitle} ({newRequest.numberOfOpenings} opening{newRequest.numberOfOpenings > 1 ? 's' : ''})</div>
-                    <div>Department: {newRequest.department}</div>
-                    <div>Budget: ${newRequest.salaryMin.toLocaleString()} - ${newRequest.salaryMax.toLocaleString()}</div>
-                    <div>Type: {newRequest.jobType} | Location: {newRequest.location}</div>
+                    <div>Position: {requestData.jobTitle} ({requestData.numberOfOpenings} opening{requestData.numberOfOpenings > 1 ? 's' : ''})</div>
+                    <div>Department: {requestData.department}</div>
+                    <div>Budget: ${requestData.salaryMin.toLocaleString()} - ${requestData.salaryMax.toLocaleString()}</div>
+                    <div>Type: {requestData.jobType} | Location: {requestData.location}</div>
                   </div>
                 </div>
               </div>
@@ -374,10 +504,7 @@ export function JobRequisition() {
                 </Button>
                 <Button 
                   className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => {
-                    handleApproval(stepId, "approve");
-                    setOpenPositions(prev => prev + newRequest.numberOfOpenings);
-                  }}
+                  onClick={() => handleApproval(stepId, "approve")}
                 >
                   Final Approve & Initiate Posting
                 </Button>
@@ -457,14 +584,33 @@ export function JobRequisition() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-2 items-center">
+          {/* My Drafts Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">My Drafts</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {drafts.length === 0 && (
+                <DropdownMenuItem disabled>No drafts</DropdownMenuItem>
+              )}
+              {drafts.map((draft, idx) => (
+                <DropdownMenuItem key={idx} onClick={() => handleRestoreDraft(draft)}>
+                  {draft.jobTitle || "Untitled"}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* + New Request Button */}
+          <Button 
+            onClick={handleNewRequest}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Request
+          </Button>
+        </div>
         <h2 className="text-2xl font-semibold">AI-Driven Job Requisition & Forecasting</h2>
-        <Button 
-          onClick={handleNewRequest}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Request
-        </Button>
       </div>
 
       {/* New Request Dialog */}
@@ -674,6 +820,9 @@ export function JobRequisition() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewRequestDialog(false)}>
               Cancel
+            </Button>
+            <Button variant="outline" onClick={handleSaveDraft}>
+              Save Draft
             </Button>
             <Button onClick={saveNewRequest} disabled={!newRequest.jobTitle || !newRequest.department}>
               Create Request
