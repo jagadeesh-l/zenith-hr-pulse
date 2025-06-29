@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 import os
 from typing import Optional
+from backend.app.config import config
 
 class RecruitmentDatabase:
     client: Optional[AsyncIOMotorClient] = None
@@ -10,11 +11,12 @@ class RecruitmentDatabase:
     @classmethod
     async def connect_to_database(cls):
         """Create database connection."""
-        # Use separate database for recruitment
-        recruitment_mongo_url = os.getenv("RECRUITMENT_MONGODB_URL", "mongodb://localhost:27017/recruitment_db")
+        # Use config.yaml or env for recruitment DB
+        recruitment_mongo_url = os.getenv("RECRUITMENT_MONGODB_URL", config.get("database.uri", "mongodb://localhost:27017"))
+        recruitment_db_name = config.get("database.name", "hr_pulse_db")
         cls.client = AsyncIOMotorClient(recruitment_mongo_url)
-        cls.database = cls.client.recruitment_db
-        print("Connected to recruitment database.")
+        cls.database = cls.client[recruitment_db_name]
+        print(f"Connected to recruitment database: {recruitment_db_name} @ {recruitment_mongo_url}")
 
     @classmethod
     async def close_database_connection(cls):

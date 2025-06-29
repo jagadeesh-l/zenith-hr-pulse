@@ -174,7 +174,7 @@ export default function Directory() {
                   </Button>
                 </div>
                 
-                <Button variant="default" className="gap-2">
+                <Button variant="default" className="gap-2" onClick={() => setShowAddEmployee(true)}>
                   <Plus className="h-4 w-4" />
                   Add Employee
                 </Button>
@@ -240,6 +240,12 @@ export default function Directory() {
           </div>
         </main>
       </div>
+      {/* Render AddEmployeeForm dialog */}
+      <AddEmployeeForm 
+        isOpen={showAddEmployee} 
+        onClose={() => setShowAddEmployee(false)} 
+        departments={departments} 
+      />
     </div>
   );
 }

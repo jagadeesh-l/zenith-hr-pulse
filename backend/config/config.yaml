@@ -5,7 +5,7 @@ app:
   debug: true
 
 database:
-  uri: "mongodb://localhost:27017"
+  uri: "mongodb+srv://jagadeeshlaks:Mongodb!23@cluster0.yeuhym3.mongodb.net/"
   name: "hr_pulse_db"
   collections:
     employees: "employees"
