@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, status, Body
 from fastapi.responses import JSONResponse
 from typing import List, Optional
-from bson import ObjectId
 import datetime
 import csv
 import io
@@ -9,13 +8,15 @@ import shutil
 import os
 from pathlib import Path
 import pandas as pd
+import uuid
 
 from ..models.employee import EmployeeCreate, EmployeeUpdate, EmployeeInDB
-from ..database import employees_collection
+from ..database import employees_collection, db
 from ..feature_flags import FeatureFlags
-from ..utils import PyObjectId, validate_object_id
 from ..services.image_upload import ImageUploadService
+from ..services.bedrock_service import bedrock_service
 from ..security import get_current_active_user
+from ..models.goal import GoalCreate
 
 router = APIRouter(
     prefix="/api/employees",
@@ -23,18 +24,27 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-# Helper function to convert MongoDB document to Employee model
+# Helper function to get employee by ID
 async def get_employee_or_404(employee_id: str) -> dict:
     """Get employee by ID or raise 404"""
-    if not validate_object_id(employee_id):
-        raise HTTPException(status_code=404, detail="Invalid employee ID format")
+    if not employee_id:
+        raise HTTPException(status_code=404, detail="Employee ID is required")
         
-    employee = await employees_collection.find_one({"_id": ObjectId(employee_id)})
+    employee = await employees_collection.find_one({"_id": employee_id})
     if employee is None:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    # Convert ObjectId to string
-    employee["id"] = str(employee["_id"])
+    # Ensure photo_url is set from S3 if not present
+    if not employee.get("photo_url"):
+        # Try to get photo from S3 using partition structure
+        location = employee.get("location")
+        department = employee.get("department")
+        photo_url = await ImageUploadService.get_employee_photo_url(employee_id, location, department)
+        if photo_url:
+            employee["photo_url"] = photo_url
+    
+    # Convert _id to id for API response
+    employee["id"] = employee["_id"]
     del employee["_id"]
     
     return employee
@@ -54,23 +64,33 @@ async def get_employees(
         if department:
             query["department"] = department
         
-        if search:
-            # Search in name, position, and department
-            query["$or"] = [
-                {"name": {"$regex": search, "$options": "i"}},
-                {"position": {"$regex": search, "$options": "i"}},
-                {"email": {"$regex": search, "$options": "i"}},
-            ]
-        
         # Get filtered employees with pagination
-        cursor = employees_collection.find(query).skip(skip).limit(limit)
+        cursor = employees_collection.find(query, skip=skip, limit=limit)
         employees = []
         
         # Process results
         async for doc in cursor:
-            doc["id"] = str(doc["_id"])
+            # Convert _id to id for API response
+            doc["id"] = doc["_id"]
             del doc["_id"]
-            employees.append(doc)
+            
+            # Ensure photo_url is set from S3 if not present
+            if not doc.get("photo_url"):
+                location = doc.get("location")
+                dept = doc.get("department")
+                photo_url = await ImageUploadService.get_employee_photo_url(doc["id"], location, dept)
+                if photo_url:
+                    doc["photo_url"] = photo_url
+            
+            # Apply search filter if provided (client-side filtering for now)
+            if search:
+                search_lower = search.lower()
+                if (search_lower in doc.get("name", "").lower() or 
+                    search_lower in doc.get("position", "").lower() or 
+                    search_lower in doc.get("email", "").lower()):
+                    employees.append(doc)
+            else:
+                employees.append(doc)
         
         return employees
     except Exception as e:
@@ -86,25 +106,29 @@ async def create_employee(
     email: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
     bio: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None)
 ):
     """Create a new employee with optional photo upload"""
     try:
+        # Generate employee ID first
+        employee_id = str(uuid.uuid4())
+        
         # Handle photo upload if provided
         photo_url = None
         if photo:
-            photo_url = await ImageUploadService.upload_photo(photo)
-            base_url = "http://localhost:8000"
-            photo_url = f"{base_url}{photo_url}"
+            photo_url = await ImageUploadService.upload_photo(photo, employee_id, location, department)
         
         # Create employee dict
         employee_data = {
+            "_id": employee_id,
             "name": name,
             "position": position,
             "department": department,
             "email": email,
             "phone": phone,
             "bio": bio,
+            "location": location,
             "photo_url": photo_url,
             "created_at": datetime.datetime.now().date().isoformat(),
             "updated_at": datetime.datetime.now().date().isoformat()
@@ -114,7 +138,7 @@ async def create_employee(
         result = await employees_collection.insert_one(employee_data)
         
         # Get created employee
-        created_employee = await get_employee_or_404(str(result.inserted_id))
+        created_employee = await get_employee_or_404(employee_id)
         return created_employee
         
     except HTTPException as he:
@@ -147,7 +171,7 @@ async def update_employee(employee_id: str, employee_update: EmployeeUpdate):
     
     # Update employee
     await employees_collection.update_one(
-        {"_id": ObjectId(employee_id)},
+        {"_id": employee_id},
         {"$set": update_data}
     )
     
@@ -158,10 +182,14 @@ async def update_employee(employee_id: str, employee_update: EmployeeUpdate):
 async def delete_employee(employee_id: str):
     """Delete employee by ID"""
     # Ensure employee exists
-    await get_employee_or_404(employee_id)
+    employee = await get_employee_or_404(employee_id)
+    
+    # Delete employee photo from S3 if exists
+    if employee.get("photo_url"):
+        await ImageUploadService.delete_photo(employee["photo_url"])
     
     # Delete employee
-    await employees_collection.delete_one({"_id": ObjectId(employee_id)})
+    await employees_collection.delete_one({"_id": employee_id})
     return None
 
 @router.post("/import-csv")
@@ -400,6 +428,61 @@ async def seed_test_data():
             detail=f"Failed to seed test data: {str(e)}"
         )
 
+@router.post("/seed-core-users", status_code=201)
+async def seed_core_users():
+    core_users = [
+        {
+            "_id": "1",
+            "name": "Alex Johnson",
+            "email": "admin@example.com",
+            "position": "Administrator",
+            "department": "Admin",
+            "role": "admin",
+            "location": "New York",
+            "created_at": datetime.datetime.now().date().isoformat(),
+            "updated_at": datetime.datetime.now().date().isoformat()
+        },
+        {
+            "_id": "2",
+            "name": "Emma Wilson",
+            "email": "user@example.com",
+            "position": "Employee",
+            "department": "General",
+            "role": "user",
+            "location": "San Francisco",
+            "created_at": datetime.datetime.now().date().isoformat(),
+            "updated_at": datetime.datetime.now().date().isoformat()
+        },
+        {
+            "_id": "3",
+            "name": "Rajinikanth",
+            "email": "rajinikanth@example.com",
+            "position": "Actor",
+            "department": "Entertainment",
+            "role": "user",
+            "location": "Chennai",
+            "created_at": datetime.datetime.now().date().isoformat(),
+            "updated_at": datetime.datetime.now().date().isoformat()
+        },
+        {
+            "_id": "4",
+            "name": "Prasanna",
+            "email": "prasanna@example.com",
+            "position": "Engineer",
+            "department": "Engineering",
+            "role": "user",
+            "location": "Bangalore",
+            "created_at": datetime.datetime.now().date().isoformat(),
+            "updated_at": datetime.datetime.now().date().isoformat()
+        }
+    ]
+    for user in core_users:
+        # Check if user exists, if not insert
+        existing = await employees_collection.find_one({"_id": user["_id"]})
+        if not existing:
+            await employees_collection.insert_one(user)
+    return {"message": "Core users seeded."}
+
 UPLOAD_DIR = Path("uploads/photos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -431,14 +514,18 @@ async def upload_employee_photo(
         # Ensure employee exists
         employee = await get_employee_or_404(employee_id)
         
-        # Handle photo upload
-        photo_url = await ImageUploadService.upload_photo(file)
-        base_url = "http://localhost:8000"  # In production, use your domain
-        photo_url = f"{base_url}{photo_url}"
+        # Delete old photo if exists
+        if employee.get("photo_url"):
+            await ImageUploadService.delete_photo(employee["photo_url"])
+        
+        # Handle photo upload with partition structure
+        location = employee.get("location")
+        department = employee.get("department")
+        photo_url = await ImageUploadService.upload_photo(file, employee_id, location, department)
         
         # Update employee with new photo URL
         await employees_collection.update_one(
-            {"_id": ObjectId(employee_id)},
+            {"_id": employee_id},
             {"$set": {"photo_url": photo_url}}
         )
         
@@ -462,20 +549,22 @@ async def create_employee_with_photo(
     phone: Optional[str] = Form(None),
     bio: Optional[str] = Form(None),
     start_date: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None)
 ):
     """Create a new employee with optional photo upload"""
     try:
+        # Generate employee ID first
+        employee_id = str(uuid.uuid4())
+        
         # Handle photo upload if provided
         photo_url = None
         if photo:
-            photo_url = await ImageUploadService.upload_photo(photo)
-            if photo_url:
-                base_url = "http://localhost:8000"  # Change in production
-                photo_url = f"{base_url}{photo_url}"
+            photo_url = await ImageUploadService.upload_photo(photo, employee_id, location, department)
 
         # Create employee data
         employee_data = {
+            "_id": employee_id,
             "name": name,
             "position": position,
             "department": department,
@@ -483,6 +572,7 @@ async def create_employee_with_photo(
             "phone": phone,
             "bio": bio,
             "start_date": start_date,
+            "location": location,
             "photo_url": photo_url,
             "created_at": datetime.datetime.now().date().isoformat(),
             "updated_at": datetime.datetime.now().date().isoformat()
@@ -492,7 +582,7 @@ async def create_employee_with_photo(
         result = await employees_collection.insert_one(employee_data)
         
         # Return created employee
-        return await get_employee_or_404(str(result.inserted_id))
+        return await get_employee_or_404(employee_id)
 
     except HTTPException as he:
         raise he
@@ -500,4 +590,148 @@ async def create_employee_with_photo(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create employee: {str(e)}"
+        )
+
+@router.post("/seed-performance-data", status_code=201)
+async def seed_performance_data():
+    # Seed synthetic employees
+    employees = [
+        {
+            "name": "Alice Smith",
+            "email": "alice.smith@example.com",
+            "position": "Software Engineer",
+            "department": "Engineering",
+            "performance_communication": 80.0,
+            "performance_leadership": 85.0,
+            "performance_client_feedback": 90.0,
+            "overall_rating": 85.0,
+            "strengths": ["Communication", "Teamwork"],
+            "tech_stack": [
+                {"name": "Python", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg", "percent": 90},
+                {"name": "AWS S3", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg", "percent": 80}
+            ]
+        },
+        {
+            "name": "Bob Johnson",
+            "email": "bob.johnson@example.com",
+            "position": "Product Manager",
+            "department": "Product",
+            "performance_communication": 75.0,
+            "performance_leadership": 88.0,
+            "performance_client_feedback": 82.0,
+            "overall_rating": 81.7,
+            "strengths": ["Leadership", "Client Focus"],
+            "tech_stack": [
+                {"name": "Jira", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jira/jira-original.svg", "percent": 85},
+                {"name": "Confluence", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/confluence/confluence-original.svg", "percent": 80}
+            ]
+        }
+    ]
+    # Insert employees if not present
+    for emp in employees:
+        existing = await employees_collection.find_one({"email": emp["email"]})
+        if not existing:
+            await employees_collection.insert_one(emp)
+    # Fetch employee IDs
+    all_emps = [e async for e in employees_collection.find({})]
+    # Seed goals for each employee
+    goals_collection = db["goals"]
+    for emp in all_emps:
+        emp_id = emp["_id"]
+        # Communication goals
+        for i in range(3):
+            goal_data = {
+                "_id": f"{emp_id}_comm_{i+1}",
+                "employeeId": emp_id,
+                "title": f"Improve Communication {i+1}",
+                "description": f"Goal to improve communication skill {i+1}",
+                "category": "communication",
+                "completion": 80.0 + i,
+                "created_at": datetime.datetime.utcnow().isoformat(),
+                "updated_at": datetime.datetime.utcnow().isoformat()
+            }
+            existing = await goals_collection.find_one({"_id": goal_data["_id"]})
+            if not existing:
+                await goals_collection.insert_one(goal_data)
+        
+        # Leadership goals
+        for i in range(2):
+            goal_data = {
+                "_id": f"{emp_id}_lead_{i+1}",
+                "employeeId": emp_id,
+                "title": f"Leadership Initiative {i+1}",
+                "description": f"Goal to improve leadership skill {i+1}",
+                "category": "leadership",
+                "completion": 85.0 + i,
+                "created_at": datetime.datetime.utcnow().isoformat(),
+                "updated_at": datetime.datetime.utcnow().isoformat()
+            }
+            existing = await goals_collection.find_one({"_id": goal_data["_id"]})
+            if not existing:
+                await goals_collection.insert_one(goal_data)
+        
+        # Client feedback goals
+        for i in range(2):
+            goal_data = {
+                "_id": f"{emp_id}_client_{i+1}",
+                "employeeId": emp_id,
+                "title": f"Client Feedback {i+1}",
+                "description": f"Goal to improve client feedback {i+1}",
+                "category": "client_feedback",
+                "completion": 90.0 + i,
+                "created_at": datetime.datetime.utcnow().isoformat(),
+                "updated_at": datetime.datetime.utcnow().isoformat()
+            }
+            existing = await goals_collection.find_one({"_id": goal_data["_id"]})
+            if not existing:
+                await goals_collection.insert_one(goal_data)
+    
+    return {"message": "Seeded synthetic employees and goals."}
+
+@router.post("/{employee_id}/ai-goal-suggestions")
+async def get_ai_goal_suggestions(employee_id: str):
+    """Get AI-powered goal suggestions for an employee"""
+    try:
+        # Get employee data
+        employee = await get_employee_or_404(employee_id)
+        
+        # Generate AI goal suggestions
+        suggestions = await bedrock_service.generate_goal_suggestions(employee)
+        
+        return {
+            "employee_id": employee_id,
+            "suggestions": suggestions
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate goal suggestions: {str(e)}"
+        )
+
+@router.post("/{employee_id}/ai-performance-feedback")
+async def get_ai_performance_feedback(
+    employee_id: str,
+    feedback_type: str = "general"
+):
+    """Get AI-powered performance feedback for an employee"""
+    try:
+        # Get employee data
+        employee = await get_employee_or_404(employee_id)
+        
+        # Generate AI performance feedback
+        feedback = await bedrock_service.generate_performance_feedback(employee, feedback_type)
+        
+        return {
+            "employee_id": employee_id,
+            "feedback_type": feedback_type,
+            "feedback": feedback
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate performance feedback: {str(e)}"
         )

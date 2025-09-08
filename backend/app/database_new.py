@@ -7,9 +7,7 @@ from .database_dynamodb import (
     get_goals_table, 
     get_feedback_table,
     get_recruitment_table,
-    initialize_dynamodb,
-    format_dynamodb_item,
-    parse_dynamodb_item
+    initialize_dynamodb
 )
 
 load_dotenv()
@@ -49,11 +47,9 @@ try:
                         response = await table.get_item(Key={"id": query["_id"]})
                         if "Item" in response:
                             item = response["Item"]
-                            # Parse item from DynamoDB format (convert Decimal to float)
-                            parsed_item = parse_dynamodb_item(item)
                             # Convert back to MongoDB-style format for compatibility
-                            parsed_item["_id"] = parsed_item.pop("id", None)
-                            return parsed_item
+                            item["_id"] = item.pop("id", None)
+                            return item
                     elif "email" in query:
                         # Use GSI for email queries
                         response = await table.query(
@@ -63,10 +59,8 @@ try:
                         )
                         if response.get("Items"):
                             item = response["Items"][0]
-                            # Parse item from DynamoDB format (convert Decimal to float)
-                            parsed_item = parse_dynamodb_item(item)
-                            parsed_item["_id"] = parsed_item.pop("id", None)
-                            return parsed_item
+                            item["_id"] = item.pop("id", None)
+                            return item
                     return None
             except Exception as e:
                 print(f"Error in find_one: {e}")
@@ -111,10 +105,8 @@ try:
                     # Convert to MongoDB-style format
                     items = []
                     for item in response.get("Items", []):
-                        # Parse item from DynamoDB format (convert Decimal to float)
-                        parsed_item = parse_dynamodb_item(item)
-                        parsed_item["_id"] = parsed_item.pop("id", None)
-                        items.append(parsed_item)
+                        item["_id"] = item.pop("id", None)
+                        items.append(item)
                     
                     # Apply skip and limit
                     items = items[skip:skip + limit]
@@ -155,10 +147,7 @@ try:
                     if "updated_at" not in item:
                         item["updated_at"] = now
                     
-                    # Format item for DynamoDB (convert floats to Decimal)
-                    formatted_item = format_dynamodb_item(item)
-                    
-                    await table.put_item(Item=formatted_item)
+                    await table.put_item(Item=item)
                     
                     # Return MongoDB-style result
                     class MockResult:

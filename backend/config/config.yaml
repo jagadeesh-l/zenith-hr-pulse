@@ -1,9 +1,27 @@
 app:
   name: "HR Pulse API"
-  version: "1.0.0"
-  description: "API for HR Pulse Employee Directory"
+  version: "2.0.0"
+  description: "API for HR Pulse Employee Directory with AWS Services"
   debug: true
 
+# AWS Services Configuration
+aws:
+  region: "us-east-1"
+  dynamodb:
+    tables:
+      employees: "zenith-hr-employees"
+      users: "zenith-hr-users"
+      goals: "zenith-hr-goals"
+      feedback: "zenith-hr-feedback"
+      recruitment: "zenith-hr-recruitment"
+  s3:
+    bucket_name: "zenith-hr-pulse-photos"
+    photos_prefix: "profile-photos/"
+  bedrock:
+    model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+    region: "us-east-1"
+
+# Legacy MongoDB (for migration purposes)
 database:
   uri: "mongodb+srv://jagadeeshlaks:Mongodb!23@cluster0.yeuhym3.mongodb.net/"
   name: "hr_pulse_db"

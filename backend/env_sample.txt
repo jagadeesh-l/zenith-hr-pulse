@@ -1,0 +1,37 @@
+# AWS Configuration
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+AWS_DEFAULT_REGION=us-east-1
+AWS_REGION=us-east-1
+
+# DynamoDB Configuration
+DYNAMODB_TABLE_EMPLOYEES=zenith-hr-employees
+DYNAMODB_TABLE_USERS=zenith-hr-users
+DYNAMODB_TABLE_GOALS=zenith-hr-goals
+DYNAMODB_TABLE_FEEDBACK=zenith-hr-feedback
+DYNAMODB_TABLE_RECRUITMENT=zenith-hr-recruitment
+
+# S3 Configuration
+S3_BUCKET_NAME=zenith-hr-pulse-photos
+S3_BUCKET_REGION=us-east-1
+S3_PHOTOS_PREFIX=profile-photos/
+
+# AWS Bedrock Configuration
+BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+BEDROCK_REGION=us-east-1
+
+# Application Configuration
+SECRET_KEY=your-secret-key-for-development-replace-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+
+# Development/Production Environment
+ENVIRONMENT=development
+DEBUG=true
+
+# Legacy MongoDB (for migration purposes - can be removed after migration)
+MONGO_URI=mongodb+srv://jagadeeshlaks:Mongodb!23@cluster0.yeuhym3.mongodb.net/
+MONGO_DB_NAME=hr_pulse_db

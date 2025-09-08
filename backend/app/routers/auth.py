@@ -1,15 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Annotated
+from typing import Union
+try:
+    from typing import Annotated
+except ImportError:
+    # For Python < 3.9 compatibility
+    from typing_extensions import Annotated
 from datetime import timedelta
 import logging
 import traceback
 
-from ..models import Token, UserLogin
+from ..models import Token, UserLogin, MOCK_USERS
 from ..security import (
     authenticate_user, 
     create_access_token, 
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    get_current_active_user
 )
 
 # Configure logging
@@ -59,4 +65,20 @@ async def login(user_data: UserLogin):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during login"
-        ) 
+        )
+
+@router.get("/me")
+async def get_me(email: str = None):
+    # For demo: allow public access and select user by email param
+    user = None
+    if email and email in MOCK_USERS:
+        user = MOCK_USERS[email]
+    else:
+        user = MOCK_USERS["admin@example.com"]
+    role = "admin" if user.get("is_admin") else "user"
+    return {
+        "role": role,
+        "employeeId": user.get("id", "1"),
+        "name": user.get("full_name", "User"),
+        "email": user.get("email", "user@example.com")
+    } 

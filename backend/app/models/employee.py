@@ -1,5 +1,5 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field, validator
 from datetime import date
 
 class SkillModel(BaseModel):
@@ -17,6 +17,12 @@ class EmployeeBase(BaseModel):
     photo_url: Optional[str] = None
     manager_id: Optional[str] = None
     skills: Optional[List[str]] = []
+    performance_communication: Optional[float] = 0.0
+    performance_leadership: Optional[float] = 0.0
+    performance_client_feedback: Optional[float] = 0.0
+    overall_rating: Optional[float] = 0.0
+    strengths: Optional[List[str]] = []
+    tech_stack: Optional[List[dict]] = []
     
 class EmployeeCreate(EmployeeBase):
     pass
@@ -36,11 +42,22 @@ class EmployeeUpdate(BaseModel):
 class EmployeeInDB(EmployeeBase):
     id: str
     manager_name: Optional[str] = None
-    created_at: date
-    updated_at: date
+    created_at: Union[date, str]
+    updated_at: Union[date, str]
+
+    @validator('created_at', 'updated_at', pre=True)
+    def parse_date(cls, v):
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            try:
+                return date.fromisoformat(v)
+            except Exception:
+                pass
+        raise ValueError('Invalid date format for created_at/updated_at')
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "5f8d0d55b54764421b71cc2d",
                 "name": "John Doe",
@@ -54,6 +71,15 @@ class EmployeeInDB(EmployeeBase):
                 "manager_id": "5f8d0d55b54764421b71cc2c",
                 "manager_name": "Jane Smith",
                 "skills": ["Python", "React", "MongoDB"],
+                "performance_communication": 85.0,
+                "performance_leadership": 90.0,
+                "performance_client_feedback": 80.0,
+                "overall_rating": 85.0,
+                "strengths": ["Leadership", "Communication"],
+                "tech_stack": [
+                    {"name": "Python", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg", "percent": 90},
+                    {"name": "AWS S3", "logo_url": "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original.svg", "percent": 80}
+                ],
                 "created_at": "2023-01-01",
                 "updated_at": "2023-10-01"
             }
