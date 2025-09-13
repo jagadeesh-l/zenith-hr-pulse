@@ -7,11 +7,29 @@ class SkillModel(BaseModel):
     level: Optional[int] = Field(None, ge=1, le=5)
 
 class EmployeeBase(BaseModel):
-    name: str
+    # Core employee information
+    employee_id: Optional[str] = None  # EmployeeID from CSV
+    first_name: Optional[str] = None   # FirstName from CSV
+    last_name: Optional[str] = None    # LastName from CSV
+    name: str                         # Computed from first_name + last_name
     email: Optional[str] = None
     position: str
     department: str
     phone: Optional[str] = None
+    mobile: Optional[str] = None      # Mobile from CSV
+    
+    # Additional fields from CSV
+    employment_category: Optional[str] = None  # EmploymentCategory
+    gender: Optional[str] = None               # Gender
+    employee_status: Optional[str] = None      # EmployeeStatus
+    account: Optional[str] = None              # Account
+    is_leader: Optional[str] = None            # IsLeader
+    location: Optional[str] = None             # Location
+    date_of_birth: Optional[date] = None       # Dob
+    date_of_joining: Optional[date] = None     # Doj
+    profile_pic: Optional[str] = None          # ProfilePic URL
+    
+    # Legacy fields for backward compatibility
     bio: Optional[str] = None
     start_date: Optional[date] = None
     photo_url: Optional[str] = None
@@ -28,11 +46,29 @@ class EmployeeCreate(EmployeeBase):
     pass
 
 class EmployeeUpdate(BaseModel):
+    # Core fields
+    employee_id: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     position: Optional[str] = None
     department: Optional[str] = None
     phone: Optional[str] = None
+    mobile: Optional[str] = None
+    
+    # Additional fields
+    employment_category: Optional[str] = None
+    gender: Optional[str] = None
+    employee_status: Optional[str] = None
+    account: Optional[str] = None
+    is_leader: Optional[str] = None
+    location: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    date_of_joining: Optional[date] = None
+    profile_pic: Optional[str] = None
+    
+    # Legacy fields
     bio: Optional[str] = None
     start_date: Optional[date] = None
     photo_url: Optional[str] = None

@@ -12,6 +12,8 @@ import uuid
 
 from ..models.employee import EmployeeCreate, EmployeeUpdate, EmployeeInDB
 from ..database import employees_collection, db
+from ..database_dynamodb import get_employees_table, parse_dynamodb_item, format_dynamodb_item
+from boto3.dynamodb.conditions import Key
 from ..feature_flags import FeatureFlags
 from ..services.image_upload import ImageUploadService
 from ..services.bedrock_service import bedrock_service
@@ -29,25 +31,31 @@ async def get_employee_or_404(employee_id: str) -> dict:
     """Get employee by ID or raise 404"""
     if not employee_id:
         raise HTTPException(status_code=404, detail="Employee ID is required")
+    
+    try:
+        table = await get_employees_table()
+        response = await table.get_item(Key={"id": employee_id})
         
-    employee = await employees_collection.find_one({"_id": employee_id})
-    if employee is None:
-        raise HTTPException(status_code=404, detail="Employee not found")
-    
-    # Ensure photo_url is set from S3 if not present
-    if not employee.get("photo_url"):
-        # Try to get photo from S3 using partition structure
-        location = employee.get("location")
-        department = employee.get("department")
-        photo_url = await ImageUploadService.get_employee_photo_url(employee_id, location, department)
-        if photo_url:
-            employee["photo_url"] = photo_url
-    
-    # Convert _id to id for API response
-    employee["id"] = employee["_id"]
-    del employee["_id"]
-    
-    return employee
+        if "Item" not in response:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        employee = parse_dynamodb_item(response["Item"])
+        
+        # Ensure photo_url is set from S3 if not present or if it's a direct S3 URL
+        if not employee.get("photo_url") or (employee.get("photo_url") and employee.get("photo_url").startswith("https://zenith-hr-pulse-photos.s3.")):
+            # Try to get photo from S3 using partition structure
+            location = employee.get("location")
+            department = employee.get("department")
+            photo_url = await ImageUploadService.get_employee_photo_url(employee_id, location, department)
+            if photo_url:
+                employee["photo_url"] = photo_url
+        
+        return employee
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch employee: {str(e)}")
 
 @router.get("", response_model=List[EmployeeInDB])
 @router.get("/", response_model=List[EmployeeInDB])
@@ -57,56 +65,98 @@ async def get_employees(
     department: Optional[str] = None,
     search: Optional[str] = None
 ):
-    """Get all employees with optional filtering"""
+    """Get all employees with optional filtering from DynamoDB"""
     try:
-        # Build query based on filters
-        query = {}
+        table = await get_employees_table()
+
+        items: List[dict] = []
+
+        # Prefer GSI query when department is provided
         if department:
-            query["department"] = department
-        
-        # Get filtered employees with pagination
-        cursor = employees_collection.find(query, skip=skip, limit=limit)
-        employees = []
-        
-        # Process results
-        async for doc in cursor:
-            # Convert _id to id for API response
-            doc["id"] = doc["_id"]
-            del doc["_id"]
-            
-            # Ensure photo_url is set from S3 if not present
-            if not doc.get("photo_url"):
+            try:
+                resp = await table.query(
+                    IndexName="DepartmentIndex",
+                    KeyConditionExpression=Key("department").eq(department),
+                    Limit=max(limit + skip, limit),
+                )
+                items = resp.get("Items", [])
+            except Exception:
+                # Fallback to scan if GSI not available
+                resp = await table.scan()
+                items = resp.get("Items", [])
+        else:
+            # Scan for all employees; cap results to skip+limit to reduce data
+            resp = await table.scan(Limit=max(limit + skip, limit))
+            items = resp.get("Items", [])
+
+        # Parse and normalize items
+        parsed = []
+        for raw in items:
+            doc = parse_dynamodb_item(raw)
+            # Ensure id field exists for API model
+            if "id" not in doc and "_id" in doc:
+                doc["id"] = doc["_id"]
+            elif "id" not in doc:
+                # Skip malformed items without id
+                continue
+
+            # Ensure photo_url is set from S3 if not present or if it's a direct S3 URL
+            if not doc.get("photo_url") or (doc.get("photo_url") and doc.get("photo_url").startswith("https://zenith-hr-pulse-photos.s3.")):
                 location = doc.get("location")
                 dept = doc.get("department")
                 photo_url = await ImageUploadService.get_employee_photo_url(doc["id"], location, dept)
                 if photo_url:
                     doc["photo_url"] = photo_url
-            
-            # Apply search filter if provided (client-side filtering for now)
-            if search:
-                search_lower = search.lower()
-                if (search_lower in doc.get("name", "").lower() or 
-                    search_lower in doc.get("position", "").lower() or 
-                    search_lower in doc.get("email", "").lower()):
-                    employees.append(doc)
-            else:
-                employees.append(doc)
-        
-        return employees
+
+            parsed.append(doc)
+
+        # Apply search filter client-side
+        if search:
+            search_lower = search.lower()
+            parsed = [
+                d for d in parsed
+                if (
+                    search_lower in d.get("name", "").lower()
+                    or search_lower in d.get("position", "").lower()
+                    or search_lower in d.get("email", "").lower()
+                )
+            ]
+
+        # Apply pagination via slicing
+        sliced = parsed[skip: skip + limit]
+        return sliced
     except Exception as e:
-        print(f"Error fetching employees: {e}")
-        # Return empty list rather than failing
+        print(f"Error fetching employees from DynamoDB: {e}")
         return []
 
 @router.post("/", response_model=EmployeeInDB, status_code=201)
 async def create_employee(
+    # Basic information
+    employee_id: Optional[str] = Form(None),
+    first_name: Optional[str] = Form(None),
+    last_name: Optional[str] = Form(None),
     name: str = Form(...),
+    email: str = Form(...),
     position: str = Form(...),
     department: str = Form(...),
-    email: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
-    bio: Optional[str] = Form(None),
+    mobile: Optional[str] = Form(None),
+    
+    # Employment details
+    employment_category: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    employee_status: Optional[str] = Form(None),
+    account: Optional[str] = Form(None),
+    is_leader: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
+    
+    # Dates
+    date_of_birth: Optional[str] = Form(None),
+    date_of_joining: Optional[str] = Form(None),
+    
+    # Additional information
+    bio: Optional[str] = Form(None),
+    start_date: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None)
 ):
     """Create a new employee with optional photo upload"""
@@ -119,27 +169,56 @@ async def create_employee(
         if photo:
             photo_url = await ImageUploadService.upload_photo(photo, employee_id, location, department)
         
-        # Create employee dict
+        # Parse dates if provided
+        dob = None
+        doj = None
+        
+        if date_of_birth:
+            try:
+                dob = datetime.datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        if date_of_joining:
+            try:
+                doj = datetime.datetime.strptime(date_of_joining, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        # Create employee dict for DynamoDB
         employee_data = {
-            "_id": employee_id,
+            "id": employee_id,
+            "employee_id": employee_id or "",
+            "first_name": first_name or "",
+            "last_name": last_name or "",
             "name": name,
+            "email": email,
             "position": position,
             "department": department,
-            "email": email,
-            "phone": phone,
-            "bio": bio,
-            "location": location,
+            "phone": phone or "",
+            "mobile": mobile or "",
+            "employment_category": employment_category or "",
+            "gender": gender or "",
+            "employee_status": employee_status or "",
+            "account": account or "",
+            "is_leader": is_leader or "",
+            "location": location or "",
+            "date_of_birth": dob.isoformat() if dob else None,
+            "date_of_joining": doj.isoformat() if doj else None,
+            "bio": bio or "",
+            "start_date": start_date,
             "photo_url": photo_url,
             "created_at": datetime.datetime.now().date().isoformat(),
             "updated_at": datetime.datetime.now().date().isoformat()
         }
         
-        # Insert into database
-        result = await employees_collection.insert_one(employee_data)
+        # Insert into DynamoDB
+        table = await get_employees_table()
+        formatted_item = format_dynamodb_item(employee_data)
+        await table.put_item(Item=formatted_item)
         
-        # Get created employee
-        created_employee = await get_employee_or_404(employee_id)
-        return created_employee
+        # Return created employee
+        return employee_data
         
     except HTTPException as he:
         raise he
@@ -169,10 +248,30 @@ async def update_employee(employee_id: str, employee_update: EmployeeUpdate):
     
     update_data["updated_at"] = datetime.datetime.now().date().isoformat()
     
-    # Update employee
-    await employees_collection.update_one(
-        {"_id": employee_id},
-        {"$set": update_data}
+    # Update employee in DynamoDB
+    table = await get_employees_table()
+    
+    # Build update expression
+    update_expression = "SET "
+    expression_attribute_values = {}
+    expression_attribute_names = {}
+    
+    for key, value in update_data.items():
+        if value is not None:
+            placeholder = f":{key}"
+            name_placeholder = f"#{key}"
+            update_expression += f"{name_placeholder} = {placeholder}, "
+            expression_attribute_values[placeholder] = value
+            expression_attribute_names[name_placeholder] = key
+    
+    # Remove trailing comma and space
+    update_expression = update_expression.rstrip(", ")
+    
+    await table.update_item(
+        Key={"id": employee_id},
+        UpdateExpression=update_expression,
+        ExpressionAttributeValues=expression_attribute_values,
+        ExpressionAttributeNames=expression_attribute_names
     )
     
     # Return updated employee
@@ -188,8 +287,9 @@ async def delete_employee(employee_id: str):
     if employee.get("photo_url"):
         await ImageUploadService.delete_photo(employee["photo_url"])
     
-    # Delete employee
-    await employees_collection.delete_one({"_id": employee_id})
+    # Delete employee from DynamoDB
+    table = await get_employees_table()
+    await table.delete_item(Key={"id": employee_id})
     return None
 
 @router.post("/import-csv")
@@ -197,7 +297,7 @@ async def import_employees_csv(
     file: UploadFile = File(...),
     overwrite: bool = Query(False),
 ):
-    """Import employees from CSV file"""
+    """Import employees from CSV/Excel file with new structure"""
     # Check if bulk upload feature is enabled
     if not FeatureFlags.is_enabled("bulk_upload"):
         raise HTTPException(
@@ -205,169 +305,265 @@ async def import_employees_csv(
             detail="Bulk upload feature is not enabled"
         )
     
-    # Read and parse CSV
-    contents = await file.read()
-    buffer = io.StringIO(contents.decode())
-    csv_reader = csv.DictReader(buffer)
-    
-    employees_to_insert = []
-    row_count = 0
-    error_rows = []
-    
-    # Process each CSV row
-    for row in csv_reader:
-        row_count += 1
-        
-        # Validate required fields
-        if not all(key in row and row[key] for key in ["name", "position", "department"]):
-            error_rows.append(f"Row {row_count}: Missing required fields")
-            continue
-        
-        # Create employee record
-        now = datetime.datetime.now().date()
-        employee = {
-            "name": row["name"],
-            "position": row["position"],
-            "department": row["department"],
-            "email": row.get("email", ""),
-            "phone": row.get("phone", ""),
-            "bio": row.get("bio", ""),
-            "start_date": row.get("start_date", None),
-            "photo_url": row.get("photo_url", ""),
-            "created_at": now,
-            "updated_at": now
-        }
-        
-        employees_to_insert.append(employee)
-    
-    # Insert employees if we have valid rows
-    inserted_count = 0
-    if employees_to_insert:
-        result = await employees_collection.insert_many(employees_to_insert)
-        inserted_count = len(result.inserted_ids)
-    
-    # Return summary
-    return {
-        "success": True,
-        "total_rows": row_count,
-        "inserted": inserted_count,
-        "errors": error_rows
-    }
-
-@router.post("/import")
-async def import_employees(
-    file: UploadFile = File(...),
-    replace_existing: bool = Form(False)
-):
-    """Import employees from CSV or Excel file"""
     try:
         contents = await file.read()
         
-        # Check file extension
+        # Check file extension and parse accordingly
         if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(contents))
+            buffer = io.StringIO(contents.decode())
+            csv_reader = csv.DictReader(buffer)
+            rows = list(csv_reader)
         elif file.filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(io.BytesIO(contents))
+            rows = df.to_dict('records')
         else:
             raise HTTPException(
                 status_code=400,
                 detail="File must be CSV or Excel format"
             )
-
-        # Map CSV columns to database fields
-        field_mapping = {
-            'employee_id': 'employee_id',
-            'first_name': 'first_name',
-            'last_name': 'last_name',
-            'email': 'email',
-            'date_of_joining': 'start_date',
-            'department': 'department',
-            'designation': 'position',
-            'phone_number': 'phone',
-            'address': 'address',
-            'city': 'city',
-            'state': 'state',
-            'country': 'country',
-            'postal_code': 'postal_code'
-        }
-
-        # Validate required columns
-        required_columns = ['first_name', 'last_name', 'email', 'department', 'designation']
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        # Expected CSV columns
+        expected_columns = [
+            "EmployeeID", "FirstName", "LastName", "EmploymentCategory", 
+            "Gender", "EmployeeStatus", "Account", "Department", 
+            "IsLeader", "Location", "Mobile", "Dob", "Doj", 
+            "Email", "Position", "ProfilePic"
+        ]
+        
+        # Check for missing required columns
+        if not rows:
+            raise HTTPException(status_code=400, detail="File is empty")
+        
+        available_columns = list(rows[0].keys())
+        missing_columns = [col for col in expected_columns if col not in available_columns]
+        
         if missing_columns:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Missing required columns: {', '.join(missing_columns)}"
-            )
-
-        # Process employees
-        successful_imports = 0
-        failed_imports = 0
-        error_messages = []
-
-        for index, row in df.iterrows():
+            error_message = f"Missing required columns: {', '.join(missing_columns)}. "
+            error_message += f"Expected columns: {', '.join(expected_columns)}. "
+            error_message += f"Found columns: {', '.join(available_columns)}"
+            raise HTTPException(status_code=400, detail=error_message)
+        
+        employees_to_insert = []
+        row_count = 0
+        error_rows = []
+        
+        # Process each row
+        for row in rows:
+            row_count += 1
+            
             try:
-                # Combine first and last name
-                full_name = f"{row['first_name']} {row['last_name']}"
+                # Validate required fields
+                required_fields = ["FirstName", "LastName", "Position", "Department", "Email"]
+                missing_fields = [field for field in required_fields if not row.get(field)]
                 
-                # Create employee data dict
-                employee_data = {
-                    "name": full_name,
-                    "position": row['designation'],
-                    "department": row['department'],
-                    "email": row['email'],
-                    "phone": str(row['phone_number']) if 'phone_number' in row else '',
-                    "start_date": row['date_of_joining'] if 'date_of_joining' in row else None,
-                    "employee_id": row['employee_id'] if 'employee_id' in row else None,
-                    "address": {
-                        "street": row['address'] if 'address' in row else '',
-                        "city": row['city'] if 'city' in row else '',
-                        "state": row['state'] if 'state' in row else '',
-                        "country": row['country'] if 'country' in row else '',
-                        "postal_code": str(row['postal_code']) if 'postal_code' in row else ''
-                    },
-                    "emergency_contact": {
-                        "name": row['emergency_contact_name'] if 'emergency_contact_name' in row else '',
-                        "phone": str(row['emergency_contact_number']) if 'emergency_contact_number' in row else ''
-                    },
-                    "personal_info": {
-                        "gender": row['gender'] if 'gender' in row else '',
-                        "blood_group": row['blood_group'] if 'blood_group' in row else '',
-                        "date_of_birth": row['date_of_birth'] if 'date_of_birth' in row else None
-                    },
-                    "employment_status": row['employment_status'] if 'employment_status' in row else 'Full-time',
-                    "reporting_manager": row['reporting_manager'] if 'reporting_manager' in row else '',
-                    "created_at": datetime.datetime.now().date().isoformat(),
-                    "updated_at": datetime.datetime.now().date().isoformat()
+                if missing_fields:
+                    error_rows.append(f"Row {row_count}: Missing required fields: {', '.join(missing_fields)}")
+                    continue
+                
+                # Parse dates
+                dob = None
+                doj = None
+                
+                if row.get("Dob"):
+                    try:
+                        dob = datetime.datetime.strptime(row["Dob"], "%Y-%m-%d").date()
+                    except ValueError:
+                        error_rows.append(f"Row {row_count}: Invalid date format for Dob (expected YYYY-MM-DD)")
+                        continue
+                
+                if row.get("Doj"):
+                    try:
+                        doj = datetime.datetime.strptime(row["Doj"], "%Y-%m-%d").date()
+                    except ValueError:
+                        error_rows.append(f"Row {row_count}: Invalid date format for Doj (expected YYYY-MM-DD)")
+                        continue
+                
+                # Create employee record
+                now = datetime.datetime.now().date()
+                employee = {
+                    "id": str(uuid.uuid4()),
+                    "employee_id": row.get("EmployeeID", ""),
+                    "first_name": row.get("FirstName", ""),
+                    "last_name": row.get("LastName", ""),
+                    "name": f"{row['FirstName']} {row['LastName']}".strip(),
+                    "email": row.get("Email", ""),
+                    "position": row.get("Position", ""),
+                    "department": row.get("Department", ""),
+                    "phone": row.get("Mobile", ""),
+                    "mobile": row.get("Mobile", ""),
+                    "employment_category": row.get("EmploymentCategory", ""),
+                    "gender": row.get("Gender", ""),
+                    "employee_status": row.get("EmployeeStatus", ""),
+                    "account": row.get("Account", ""),
+                    "is_leader": row.get("IsLeader", ""),
+                    "location": row.get("Location", ""),
+                    "date_of_birth": dob.isoformat() if dob else None,
+                    "date_of_joining": doj.isoformat() if doj else None,
+                    "profile_pic": row.get("ProfilePic", ""),
+                    "photo_url": row.get("ProfilePic", ""),  # Map ProfilePic to photo_url for compatibility
+                    "created_at": now.isoformat(),
+                    "updated_at": now.isoformat()
                 }
-
-                # Convert NaN values to None
-                employee_data = {k: (v if pd.notna(v) else None) for k, v in employee_data.items()}
-
-                # Insert employee
-                print(f"Inserting employee data: {employee_data}")  # Debug print
-                result = await employees_collection.insert_one(employee_data)
-                successful_imports += 1
-
+                
+                employees_to_insert.append(employee)
+                
             except Exception as e:
-                failed_imports += 1
-                error_messages.append(f"Row {index + 2}: {str(e)}")
-                print(f"Error processing row {index + 2}: {str(e)}")  # Debug print
-
-        return JSONResponse(content={
-            "status": "completed",
-            "successful_imports": successful_imports,
-            "failed_imports": failed_imports,
-            "errors": error_messages
-        })
-
+                error_rows.append(f"Row {row_count}: Error processing row - {str(e)}")
+                continue
+        
+        # Insert employees into DynamoDB
+        inserted_count = 0
+        if employees_to_insert:
+            table = await get_employees_table()
+            for employee in employees_to_insert:
+                try:
+                    formatted_item = format_dynamodb_item(employee)
+                    await table.put_item(Item=formatted_item)
+                    inserted_count += 1
+                except Exception as e:
+                    error_rows.append(f"Error inserting employee {employee.get('name', 'Unknown')}: {str(e)}")
+        
+        # Return summary
+        return {
+            "success": True,
+            "total_rows": row_count,
+            "inserted": inserted_count,
+            "errors": error_rows,
+            "message": f"Successfully imported {inserted_count} out of {row_count} employees"
+        }
+        
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"Import failed: {str(e)}")  # Debug print
         raise HTTPException(
             status_code=500,
             detail=f"Import failed: {str(e)}"
+        )
+
+# Old import endpoint removed - using /import-csv instead with new structure
+
+@router.get("/dashboard-test")
+async def get_dashboard_test():
+    """Simple test endpoint"""
+    return {"message": "Dashboard test endpoint working!"}
+
+@router.get("/dashboard")
+async def get_employees_dashboard():
+    """Get comprehensive employee analytics data for dashboard visualization"""
+    try:
+        # Get all employees
+        table = await get_employees_table()
+        response = await table.scan()
+        
+        if "Items" not in response:
+            return {
+                "total_employees": 0,
+                "monthly_headcount": [],
+                "by_account": {},
+                "by_location": {},
+                "by_employee_status": {},
+                "by_employment_category": {},
+                "by_is_leader": {},
+                "by_position": {},
+                "by_department": {},
+                "by_gender": {},
+                "employees": []
+            }
+        
+        employees = []
+        for item in response["Items"]:
+            employee = parse_dynamodb_item(item)
+            employees.append(employee)
+        
+        # Calculate monthly headcount data
+        monthly_headcount = []
+        current_year = datetime.datetime.now().year
+        
+        for month in range(1, 13):
+            month_date = datetime.datetime(current_year, month, 1)
+            end_date = datetime.datetime(current_year, month + 1, 1) if month < 12 else datetime.datetime(current_year + 1, 1, 1)
+            
+            # Count employees who joined before or during this month
+            count = 0
+            for emp in employees:
+                join_date_str = emp.get("date_of_joining") or emp.get("created_at")
+                if join_date_str:
+                    try:
+                        join_date = datetime.datetime.fromisoformat(join_date_str.replace('Z', '+00:00'))
+                        if join_date <= end_date:
+                            count += 1
+                    except:
+                        # If date parsing fails, count as joined
+                        count += 1
+            
+            monthly_headcount.append({
+                "month": month_date.strftime("%b"),
+                "count": count,
+                "month_number": month
+            })
+        
+        # Calculate distribution data
+        by_account = {}
+        by_location = {}
+        by_employee_status = {}
+        by_employment_category = {}
+        by_is_leader = {}
+        by_position = {}
+        by_department = {}
+        by_gender = {}
+        
+        for emp in employees:
+            # Account distribution
+            account = emp.get("account", "Unknown")
+            by_account[account] = by_account.get(account, 0) + 1
+            
+            # Location distribution
+            location = emp.get("location", "Unknown")
+            by_location[location] = by_location.get(location, 0) + 1
+            
+            # Employee status distribution
+            status = emp.get("employee_status", "Unknown")
+            by_employee_status[status] = by_employee_status.get(status, 0) + 1
+            
+            # Employment category distribution
+            category = emp.get("employment_category", "Unknown")
+            by_employment_category[category] = by_employment_category.get(category, 0) + 1
+            
+            # Is leader distribution
+            is_leader = emp.get("is_leader", "No")
+            by_is_leader[is_leader] = by_is_leader.get(is_leader, 0) + 1
+            
+            # Position distribution
+            position = emp.get("position", "Unknown")
+            by_position[position] = by_position.get(position, 0) + 1
+            
+            # Department distribution
+            department = emp.get("department", "Unknown")
+            by_department[department] = by_department.get(department, 0) + 1
+            
+            # Gender distribution
+            gender = emp.get("gender", "Unknown")
+            by_gender[gender] = by_gender.get(gender, 0) + 1
+        
+        return {
+            "total_employees": len(employees),
+            "monthly_headcount": monthly_headcount,
+            "by_account": by_account,
+            "by_location": by_location,
+            "by_employee_status": by_employee_status,
+            "by_employment_category": by_employment_category,
+            "by_is_leader": by_is_leader,
+            "by_position": by_position,
+            "by_department": by_department,
+            "by_gender": by_gender,
+            "employees": employees  # Include full employee data for filtering
+        }
+        
+    except Exception as e:
+        print(f"Error getting dashboard data: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get dashboard data: {str(e)}"
         )
 
 @router.post("/seed-test-data", status_code=201)
@@ -488,14 +684,21 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload-photo")
 async def upload_photo(file: UploadFile = File(...)):
-    """Upload a photo and return its URL"""
+    """Upload a photo and return its URL (legacy endpoint - use /upload-photo/{employee_id} instead)"""
     try:
-        photo_url = await ImageUploadService.upload_photo(file)
-        base_url = "http://localhost:8000"  # In production, use your domain
-        return {"photo_url": f"{base_url}{photo_url}"}
+        print(f"Legacy upload-photo endpoint called with file: {file.filename}")
+        # Generate a temporary employee ID for the legacy endpoint
+        temp_employee_id = str(uuid.uuid4())
+        photo_url = await ImageUploadService.upload_photo(file, temp_employee_id, None, None)
+        print(f"Legacy endpoint uploaded photo: {photo_url}")
+        return {"photo_url": photo_url}
     except HTTPException as he:
+        print(f"HTTPException in legacy upload_photo: {he}")
         raise he
     except Exception as e:
+        print(f"Error in legacy upload_photo: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload file: {str(e)}"
@@ -506,35 +709,50 @@ async def upload_employee_photo(
     employee_id: str,
     name: str = Form(...),  # Fix: Use fastapi Form class
     description: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_active_user)
+    file: UploadFile = File(...)
 ):
     """Upload an employee's photo"""
     try:
+        print(f"Uploading photo for employee {employee_id}")
         # Ensure employee exists
         employee = await get_employee_or_404(employee_id)
+        print(f"Employee found: {employee.get('name')}")
         
         # Delete old photo if exists
         if employee.get("photo_url"):
+            print(f"Deleting old photo: {employee.get('photo_url')}")
             await ImageUploadService.delete_photo(employee["photo_url"])
         
         # Handle photo upload with partition structure
         location = employee.get("location")
         department = employee.get("department")
+        print(f"Uploading to S3 with location={location}, department={department}")
         photo_url = await ImageUploadService.upload_photo(file, employee_id, location, department)
+        print(f"Photo uploaded successfully: {photo_url}")
         
-        # Update employee with new photo URL
-        await employees_collection.update_one(
-            {"_id": employee_id},
-            {"$set": {"photo_url": photo_url}}
+        # Update employee with new photo URL in DynamoDB
+        table = await get_employees_table()
+        await table.update_item(
+            Key={"id": employee_id},
+            UpdateExpression="SET photo_url = :photo_url, updated_at = :updated_at",
+            ExpressionAttributeValues={
+                ":photo_url": photo_url,
+                ":updated_at": datetime.datetime.now().date().isoformat()
+            }
         )
+        print("Employee record updated in DynamoDB")
         
         # Return updated employee
-        return await get_employee_or_404(employee_id)
+        updated_employee = await get_employee_or_404(employee_id)
+        return updated_employee
     
     except HTTPException as he:
+        print(f"HTTPException in upload_employee_photo: {he}")
         raise he
     except Exception as e:
+        print(f"Exception in upload_employee_photo: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload employee photo: {str(e)}"
@@ -562,9 +780,9 @@ async def create_employee_with_photo(
         if photo:
             photo_url = await ImageUploadService.upload_photo(photo, employee_id, location, department)
 
-        # Create employee data
+        # Create employee data for DynamoDB
         employee_data = {
-            "_id": employee_id,
+            "id": employee_id,
             "name": name,
             "position": position,
             "department": department,
@@ -578,11 +796,13 @@ async def create_employee_with_photo(
             "updated_at": datetime.datetime.now().date().isoformat()
         }
 
-        # Insert into database
-        result = await employees_collection.insert_one(employee_data)
+        # Insert into DynamoDB
+        table = await get_employees_table()
+        formatted_item = format_dynamodb_item(employee_data)
+        await table.put_item(Item=formatted_item)
         
         # Return created employee
-        return await get_employee_or_404(employee_id)
+        return employee_data
 
     except HTTPException as he:
         raise he

@@ -26,7 +26,7 @@ export default function Login() {
       const fallbackTimer = setTimeout(() => {
         if (loginVideoRef.current) {
           console.log("Fallback navigation triggered");
-          navigate("/dashboard");
+          navigate("/home");
         }
       }, 5000);
       
@@ -115,7 +115,7 @@ export default function Login() {
         // Try to play the video, but if it fails, navigate anyway
         loginVideoRef.current.play().catch(err => {
           console.error("Could not play login video:", err);
-          navigate("/dashboard");
+          navigate("/home");
         });
       }
       

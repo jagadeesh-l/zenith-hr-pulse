@@ -11,7 +11,8 @@ import {
   Filter, 
   X, 
   Upload, 
-  Plus 
+  Plus,
+  BarChart2
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmployeeCard, EmployeeCardProps } from "@/components/EmployeeCard";
@@ -127,7 +128,12 @@ export default function Directory() {
             <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by employee name, ID" className="pl-10 pr-4" />
+                <Input 
+                  placeholder="Search by employee name, ID" 
+                  className="pl-10 pr-4" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
               
               <div className="flex gap-2 ml-auto">
@@ -178,7 +184,11 @@ export default function Directory() {
                   <Plus className="h-4 w-4" />
                   Add Employee
                 </Button>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => window.location.href = '/dashboard'}>
+                  <BarChart2 className="h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
                   <Upload className="h-4 w-4" />
                   Import
                 </Button>
@@ -245,6 +255,12 @@ export default function Directory() {
         isOpen={showAddEmployee} 
         onClose={() => setShowAddEmployee(false)} 
         departments={departments} 
+      />
+      
+      {/* Render ImportEmployees dialog */}
+      <ImportEmployees 
+        isOpen={showImport} 
+        onClose={() => setShowImport(false)} 
       />
     </div>
   );

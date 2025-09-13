@@ -52,15 +52,17 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
       // Create a FormData object to send the file
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('name', employee.name); // Required by backend
       
       try {
-        const response = await fetch('http://localhost:8000/api/employees/upload-photo', {
+        const response = await fetch(`http://localhost:8000/api/employees/upload-photo/${employee.id}`, {
           method: 'POST',
           body: formData,
         });
         
         if (!response.ok) {
-          throw new Error('Failed to upload image');
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to upload image');
         }
         
         const data = await response.json();
@@ -78,7 +80,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         console.error('Error uploading photo:', error);
         toast({
           title: "Error",
-          description: "Failed to upload photo",
+          description: `Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`,
           variant: "destructive"
         });
       }

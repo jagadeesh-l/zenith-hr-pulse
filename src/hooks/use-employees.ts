@@ -145,13 +145,13 @@ export function useEmployees() {
         if (value !== undefined && value !== null) {
           if (key === 'photoUrl' && value instanceof File) {
             formData.append('photo', value); // Change to 'photo' to match backend
-          } else {
+          } else if (key !== 'photoUrl') { // Skip photoUrl if it's not a File
             formData.append(key, value.toString());
           }
         }
       });
 
-      const response = await fetch(`${API_BASE_URL}/employees/create`, {  // Updated endpoint
+      const response = await fetch(`${API_BASE_URL}/employees/`, {  // Use main endpoint
         method: 'POST',
         body: formData, // Use FormData instead of JSON
       });
@@ -299,7 +299,7 @@ export function useEmployees() {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(`${API_BASE_URL}/employees/import`, {  // Changed endpoint
+      const response = await fetch(`${API_BASE_URL}/employees/import-csv`, {  // Use the new CSV import endpoint
         method: 'POST',
         body: formData,
       });

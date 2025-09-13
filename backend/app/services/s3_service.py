@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 import aioboto3
@@ -58,12 +59,19 @@ class S3Service:
                     Key=s3_key,
                     Body=file_content,
                     ContentType=file.content_type or 'image/jpeg',
-                    ACL='public-read'  # Make the file publicly accessible
+                    # Use presigned URL approach for public access
+                    CacheControl='public, max-age=31536000'
                 )
             
-            # Return the public URL
-            photo_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
-            return photo_url
+            # Generate a presigned URL for public access (valid for 1 year)
+            session = aioboto3.Session()
+            async with session.client('s3', region_name=self.region) as s3:
+                photo_url = await s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                    ExpiresIn=31536000  # 1 year
+                )
+                return photo_url
             
         except HTTPException as he:
             raise he
@@ -102,8 +110,20 @@ class S3Service:
             return False
     
     async def get_photo_url(self, s3_key: str) -> str:
-        """Get the public URL for an S3 object"""
-        return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
+        """Get the presigned URL for an S3 object"""
+        try:
+            session = aioboto3.Session()
+            async with session.client('s3', region_name=self.region) as s3:
+                photo_url = await s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                    ExpiresIn=31536000  # 1 year
+                )
+                return photo_url
+        except Exception as e:
+            print(f"Error generating presigned URL: {e}")
+            # Fallback to direct URL
+            return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
     
     async def list_photos(self, prefix: Optional[str] = None) -> list:
         """List all photos in the S3 bucket"""
@@ -178,7 +198,8 @@ class S3Service:
         try:
             photos = await self.get_employee_photos(employee_id, location, department)
             if photos:
-                return photos[0]['url']
+                # Generate presigned URL for the photo
+                return await self.get_photo_url(photos[0]['key'])
             return None
         except Exception as e:
             print(f"Error getting employee photo URL: {e}")
@@ -193,6 +214,8 @@ class S3Service:
                 try:
                     await s3.head_bucket(Bucket=self.bucket_name)
                     print(f"S3 bucket {self.bucket_name} already exists")
+                    # Ensure bucket policy is set for public read access
+                    await self._set_bucket_policy(s3)
                     return True
                 except ClientError as e:
                     if e.response['Error']['Code'] == '404':
@@ -206,6 +229,8 @@ class S3Service:
                                 CreateBucketConfiguration={'LocationConstraint': self.region}
                             )
                         print(f"S3 bucket {self.bucket_name} created successfully")
+                        # Set bucket policy for public read access
+                        await self._set_bucket_policy(s3)
                         return True
                     else:
                         print(f"Error checking S3 bucket: {e}")
@@ -214,6 +239,32 @@ class S3Service:
         except Exception as e:
             print(f"Error creating S3 bucket: {e}")
             return False
+    
+    async def _set_bucket_policy(self, s3_client):
+        """Set bucket policy for public read access"""
+        try:
+            bucket_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "PublicReadGetObject",
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": "s3:GetObject",
+                        "Resource": f"arn:aws:s3:::{self.bucket_name}/*"
+                    }
+                ]
+            }
+            
+            await s3_client.put_bucket_policy(
+                Bucket=self.bucket_name,
+                Policy=json.dumps(bucket_policy)
+            )
+            print(f"Bucket policy set for public read access on {self.bucket_name}")
+            
+        except Exception as e:
+            print(f"Error setting bucket policy: {e}")
+            # Don't fail the entire operation if policy setting fails
 
 # Global S3 service instance
 s3_service = S3Service()

@@ -69,6 +69,29 @@ export function ImportEmployees({ isOpen, onClose }: ImportEmployeesProps) {
     });
   };
 
+  const downloadTemplate = () => {
+    const csvContent = [
+      "EmployeeID,FirstName,LastName,EmploymentCategory,Gender,EmployeeStatus,Account,Department,IsLeader,Location,Mobile,Dob,Doj,Email,Position,ProfilePic",
+      "E0001,Ajay,Patel,FTE,Male,Billable,Ford,Info Services Delivery,No,India,9884271939,1969-12-01,2025-07-02,Ravikumar.Sivaprakasam@infoservices.com,Manager,https://example.com/profile.jpg",
+      "E0002,Jane,Smith,FTE,Female,Billable,Microsoft,Engineering,Yes,USA,5551234567,1990-05-15,2024-01-15,jane.smith@microsoft.com,Senior Developer,https://example.com/jane.jpg"
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'employee_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Template Downloaded",
+      description: "CSV template has been downloaded successfully.",
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -127,17 +150,41 @@ export function ImportEmployees({ isOpen, onClose }: ImportEmployeesProps) {
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">Requirements:</h3>
-              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
-                <li>CSV or Excel file with headers</li>
-                <li>Required columns: name, position, department</li>
-                <li>Optional: email, phone, start_date, manager, bio</li>
-                <li>Maximum 500 records per import</li>
-              </ul>
+              <h3 className="text-sm font-medium">Required Columns:</h3>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><strong>EmployeeID:</strong> Unique employee identifier</div>
+                  <div><strong>FirstName:</strong> Employee's first name</div>
+                  <div><strong>LastName:</strong> Employee's last name</div>
+                  <div><strong>Email:</strong> Employee's email address</div>
+                  <div><strong>Position:</strong> Job title/position</div>
+                  <div><strong>Department:</strong> Department name</div>
+                  <div><strong>EmploymentCategory:</strong> FTE, Contractor, etc.</div>
+                  <div><strong>Gender:</strong> Male, Female, Other</div>
+                  <div><strong>EmployeeStatus:</strong> Billable, Non-billable, etc.</div>
+                  <div><strong>Account:</strong> Client account name</div>
+                  <div><strong>IsLeader:</strong> Yes/No</div>
+                  <div><strong>Location:</strong> Work location</div>
+                  <div><strong>Mobile:</strong> Phone number</div>
+                  <div><strong>Dob:</strong> Date of birth (YYYY-MM-DD)</div>
+                  <div><strong>Doj:</strong> Date of joining (YYYY-MM-DD)</div>
+                  <div><strong>ProfilePic:</strong> Profile picture URL</div>
+                </div>
+              </div>
               
-              <a href="#" className="text-xs text-primary inline-block mt-2">
-                Download template
-              </a>
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-xs text-blue-800">
+                  <strong>Note:</strong> All columns are required. Date format must be YYYY-MM-DD. 
+                  Maximum 500 records per import.
+                </p>
+              </div>
+              
+              <button 
+                onClick={() => downloadTemplate()}
+                className="text-xs text-primary inline-block mt-2 hover:underline"
+              >
+                Download CSV Template
+              </button>
             </div>
             
             <div className="flex justify-end gap-2 pt-2">
