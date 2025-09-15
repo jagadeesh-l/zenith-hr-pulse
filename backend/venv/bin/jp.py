@@ -1,4 +1,4 @@
-#!/Users/jagadeeshlakshminarasimhan/Documents/Zenith/zenith-hr-pulse/backend/venv/bin/python3.12
+#!/Users/jagadeesh/Documents/zenith-hr-pulse/backend/venv/bin/python3.13
 
 import sys
 import json

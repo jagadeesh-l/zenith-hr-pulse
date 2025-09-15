@@ -18,6 +18,8 @@ import { Card } from "@/components/ui/card";
 import { EmployeeCard, EmployeeCardProps } from "@/components/EmployeeCard";
 import { EmployeeList } from "@/components/EmployeeList";
 import { EmployeeHierarchy } from "@/components/EmployeeHierarchy";
+import { EmployeeHierarchyFlowchart } from "@/components/EmployeeHierarchyFlowchart";
+import { EmployeeOrgTree } from "@/components/EmployeeOrgTree";
 import { AddEmployeeForm } from "@/components/employee/AddEmployeeForm";
 import { ImportEmployees } from "@/components/employee/ImportEmployees";
 import { useAuth } from "@/hooks/use-auth"; // Assuming you have this
@@ -37,11 +39,13 @@ import {
 } from "@/components/ui/sidebar";
 
 type ViewMode = "grid" | "list" | "hierarchy";
+type HierarchyViewMode = "levels" | "flowchart" | "tree";
 
 export default function Directory() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeModule, setActiveModule] = useState<string>("Directory");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [hierarchyViewMode, setHierarchyViewMode] = useState<HierarchyViewMode>("levels");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -56,6 +60,7 @@ export default function Directory() {
     isLoading, 
     error,
     createEmployee,
+    updateEmployee,
     importEmployeesFromCsv 
   } = useEmployees();
   
@@ -238,11 +243,53 @@ export default function Directory() {
                   )}
                   
                   {viewMode === "list" && (
-                    <EmployeeList employees={filteredEmployees as any} />
+                    <EmployeeList employees={filteredEmployees as any} updateEmployee={updateEmployee} />
                   )}
                   
                   {viewMode === "hierarchy" && (
-                    <EmployeeHierarchy employees={filteredEmployees as any} />
+                    <>
+                      {/* Hierarchy View Toggle */}
+                      <div className="flex items-center gap-2 mb-6">
+                        <span className="text-sm text-muted-foreground">Hierarchy View:</span>
+                        <div className="flex border border-border rounded-md overflow-hidden">
+                          <Button
+                            variant={hierarchyViewMode === "levels" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setHierarchyViewMode("levels")}
+                            className="rounded-none"
+                          >
+                            Levels
+                          </Button>
+                          <Button
+                            variant={hierarchyViewMode === "flowchart" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setHierarchyViewMode("flowchart")}
+                            className="rounded-none"
+                          >
+                            Org's List
+                          </Button>
+                          <Button
+                            variant={hierarchyViewMode === "tree" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setHierarchyViewMode("tree")}
+                            className="rounded-none"
+                          >
+                            Org's Tree
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Render appropriate hierarchy view */}
+                      {hierarchyViewMode === "levels" && (
+                        <EmployeeHierarchy employees={filteredEmployees as any} />
+                      )}
+                      {hierarchyViewMode === "flowchart" && (
+                        <EmployeeHierarchyFlowchart employees={filteredEmployees as any} />
+                      )}
+                      {hierarchyViewMode === "tree" && (
+                        <EmployeeOrgTree employees={filteredEmployees as any} />
+                      )}
+                    </>
                   )}
                 </>
               )}

@@ -34,6 +34,7 @@ class EmployeeBase(BaseModel):
     start_date: Optional[date] = None
     photo_url: Optional[str] = None
     manager_id: Optional[str] = None
+    reporting_to: Optional[str] = None  # Employee ID of the person they report to
     skills: Optional[List[str]] = []
     performance_communication: Optional[float] = 0.0
     performance_leadership: Optional[float] = 0.0
@@ -73,6 +74,7 @@ class EmployeeUpdate(BaseModel):
     start_date: Optional[date] = None
     photo_url: Optional[str] = None
     manager_id: Optional[str] = None
+    reporting_to: Optional[str] = None
     skills: Optional[List[str]] = None
 
 class EmployeeInDB(EmployeeBase):

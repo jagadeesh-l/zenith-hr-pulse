@@ -13,6 +13,7 @@ export interface Employee {
   bio?: string;
   startDate?: string;
   manager?: string;
+  reporting_to?: string;
   skills?: string[];
 }
 
@@ -59,6 +60,7 @@ export function useEmployees() {
         bio: emp.bio || "",
         startDate: emp.start_date || "",
         manager: emp.manager_name || "",
+        reporting_to: emp.reporting_to || "",
         skills: emp.skills || []
       }));
       
@@ -218,6 +220,7 @@ export function useEmployees() {
           bio: formattedData.bio,
           start_date: formattedData.start_date,
           photo_url: formattedData.photoUrl,
+          reporting_to: formattedData.reporting_to,
           skills: formattedData.skills
         }),
       });
@@ -240,6 +243,7 @@ export function useEmployees() {
         bio: data.bio,
         startDate: data.start_date,
         manager: data.manager_name,
+        reporting_to: data.reporting_to,
         skills: data.skills
       };
       
