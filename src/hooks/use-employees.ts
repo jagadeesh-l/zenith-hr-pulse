@@ -4,17 +4,23 @@ import { useToast } from './use-toast';
 // Employee type definition
 export interface Employee {
   id: string;
+  employeeId?: string;
   name: string;
   position: string;
   department: string;
   photoUrl?: string;
   email?: string;
   phone?: string;
+  mobile?: string;
   bio?: string;
   startDate?: string;
   manager?: string;
   reporting_to?: string;
   skills?: string[];
+  location?: string;
+  dateOfBirth?: string;
+  dateOfJoining?: string;
+  gender?: string;
 }
 
 // API base URL - could be moved to environment config
@@ -51,17 +57,23 @@ export function useEmployees() {
       // Transform data to match our frontend model
       const transformedData = data.map((emp: any) => ({
         id: emp.id || "temp-" + Math.random().toString(36).substr(2, 9),
+        employeeId: emp.employee_id || "",
         name: emp.name || "Unknown",
         position: emp.position || "Not specified",
         department: emp.department || "Not specified",
         photoUrl: emp.photo_url || "",
         email: emp.email || "",
         phone: emp.phone || "",
+        mobile: emp.mobile || "",
         bio: emp.bio || "",
         startDate: emp.start_date || "",
-        manager: emp.manager_name || "",
+        manager: emp.reporting_to || "", // Map manager to reporting_to field
         reporting_to: emp.reporting_to || "",
-        skills: emp.skills || []
+        skills: emp.skills || [],
+        location: emp.location || "",
+        dateOfBirth: emp.date_of_birth || "",
+        dateOfJoining: emp.date_of_joining || "",
+        gender: emp.gender || ""
       }));
       
       setEmployees(transformedData);

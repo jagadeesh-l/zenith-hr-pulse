@@ -19,7 +19,8 @@ class DynamoDBService:
             "users": os.getenv("DYNAMODB_TABLE_USERS", "zenith-hr-users"),
             "goals": os.getenv("DYNAMODB_TABLE_GOALS", "zenith-hr-goals"),
             "feedback": os.getenv("DYNAMODB_TABLE_FEEDBACK", "zenith-hr-feedback"),
-            "recruitment": os.getenv("DYNAMODB_TABLE_RECRUITMENT", "zenith-hr-recruitment")
+            "recruitment": os.getenv("DYNAMODB_TABLE_RECRUITMENT", "zenith-hr-recruitment"),
+            "feature_flags": os.getenv("DYNAMODB_TABLE_FEATURE_FLAGS", "zenith-hr-feature-flags")
         }
         self.session = None
         self.dynamodb = None
@@ -165,6 +166,44 @@ class DynamoDBService:
                     }
                 ],
                 "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+            },
+            "feature_flags": {
+                "KeySchema": [
+                    {"AttributeName": "id", "KeyType": "HASH"}
+                ],
+                "AttributeDefinitions": [
+                    {"AttributeName": "id", "AttributeType": "S"},
+                    {"AttributeName": "category", "AttributeType": "S"},
+                    {"AttributeName": "module", "AttributeType": "S"},
+                    {"AttributeName": "name", "AttributeType": "S"}
+                ],
+                "GlobalSecondaryIndexes": [
+                    {
+                        "IndexName": "category-index",
+                        "KeySchema": [
+                            {"AttributeName": "category", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "module-index",
+                        "KeySchema": [
+                            {"AttributeName": "module", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "name-index",
+                        "KeySchema": [
+                            {"AttributeName": "name", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                    }
+                ],
+                "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
             }
         }
         
@@ -212,6 +251,11 @@ async def get_recruitment_table():
     """Get recruitment table"""
     async with dynamodb_service as db:
         return await db.get_table("recruitment")
+
+async def get_feature_flags_table():
+    """Get feature flags table"""
+    async with dynamodb_service as db:
+        return await db.get_table("feature_flags")
 
 # Utility functions for DynamoDB operations
 def generate_id() -> str:

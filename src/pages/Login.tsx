@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { getFirstAvailableModuleRoute } from "@/utils/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,38 +17,42 @@ export default function Login() {
   const [loginClicked, setLoginClicked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { featureFlagStatus, isLoading: flagsLoading } = useFeatureFlags();
   
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const loginVideoRef = useRef<HTMLVideoElement>(null);
   
-  // Set a timeout to navigate to dashboard if video playback takes too long
+  // Set a timeout to navigate to first available module if video playback takes too long
   useEffect(() => {
-    if (loginClicked) {
+    if (loginClicked && !flagsLoading) {
       // Fallback navigation after 5 seconds if video doesn't complete
       const fallbackTimer = setTimeout(() => {
         if (loginVideoRef.current) {
           console.log("Fallback navigation triggered");
-          navigate("/home");
+          const firstAvailableRoute = getFirstAvailableModuleRoute(featureFlagStatus);
+          navigate(firstAvailableRoute);
         }
       }, 5000);
       
       return () => clearTimeout(fallbackTimer);
     }
-  }, [loginClicked, navigate]);
+  }, [loginClicked, navigate, flagsLoading, featureFlagStatus]);
   
   // Monitor the login video's completion
   useEffect(() => {
     const loginVideo = loginVideoRef.current;
     
-    if (!loginVideo) return;
+    if (!loginVideo || flagsLoading) return;
     
     const handleLoginVideoEnd = () => {
-      navigate("/dashboard");
+      const firstAvailableRoute = getFirstAvailableModuleRoute(featureFlagStatus);
+      navigate(firstAvailableRoute);
     };
     
     const handleLoginVideoError = () => {
       console.error("Login video playback error");
-      navigate("/dashboard");
+      const firstAvailableRoute = getFirstAvailableModuleRoute(featureFlagStatus);
+      navigate(firstAvailableRoute);
     };
     
     loginVideo.addEventListener('ended', handleLoginVideoEnd);
@@ -56,7 +62,7 @@ export default function Login() {
       loginVideo.removeEventListener('ended', handleLoginVideoEnd);
       loginVideo.removeEventListener('error', handleLoginVideoError);
     };
-  }, [navigate]);
+  }, [navigate, flagsLoading, featureFlagStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

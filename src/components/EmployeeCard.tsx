@@ -4,16 +4,23 @@ import { EmployeeProfile } from "./employee/EmployeeProfile";
 
 export type EmployeeCardProps = {
   id: string;
+  employeeId?: string;
   name: string;
   position: string;
   department: string;
   photoUrl?: string; // Optional photo URL
   email?: string;
   phone?: string;
+  mobile?: string;
   bio?: string;
   startDate?: string;
   manager?: string;
+  reporting_to?: string;
   skills?: string[];
+  location?: string;
+  dateOfBirth?: string;
+  dateOfJoining?: string;
+  gender?: string;
   className?: string;
 }
 
@@ -91,16 +98,23 @@ export function EmployeeCard(props: EmployeeCardProps) {
         onClose={() => setShowProfile(false)}
         employee={{
           id: props.id,
+          employeeId: props.employeeId,
           name: props.name,
           position: props.position,
           department: props.department,
           photoUrl: props.photoUrl || '', // Provide a default empty string for photoUrl
           email: props.email,
           phone: props.phone,
+          mobile: props.mobile,
           bio: props.bio,
           startDate: props.startDate,
           manager: props.manager,
-          skills: props.skills
+          reporting_to: props.reporting_to,
+          skills: props.skills,
+          location: props.location,
+          dateOfBirth: props.dateOfBirth,
+          dateOfJoining: props.dateOfJoining,
+          gender: props.gender
         }}
       />
     </>

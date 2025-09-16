@@ -1,25 +1,20 @@
 import { 
   Calendar, 
   Users, 
-  FileText, 
   UserPlus, 
   BarChart2, 
   Layout, 
-  ClipboardCheck, 
   DollarSign, 
   BookOpen, 
-  Award, 
   TrendingUp, 
   HelpCircle,
   Star,
-  Folders,
-  ChevronLeft,
-  ChevronRight
+  Folders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 
 type ModuleButtonProps = {
   icon: React.ReactNode;
@@ -27,14 +22,14 @@ type ModuleButtonProps = {
   active?: boolean;
   to?: string;
   onClick?: () => void;
-  isCollapsed?: boolean;
+  disabled?: boolean;
 }
 
-const ModuleButton = ({ icon, label, active, to, onClick, isCollapsed }: ModuleButtonProps) => {
+const ModuleButton = ({ icon, label, active, to, onClick, disabled }: ModuleButtonProps) => {
   const content = (
     <>
       {icon}
-      {!isCollapsed && <span className="transition-all duration-200">{label}</span>}
+      <span className="transition-all duration-200">{label}</span>
     </>
   );
 
@@ -42,25 +37,25 @@ const ModuleButton = ({ icon, label, active, to, onClick, isCollapsed }: ModuleB
     <Button
       variant="ghost"
       asChild
+      disabled={disabled}
       className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
+        "w-full justify-start gap-3 mb-1 px-4",
+        active ? "bg-accent" : "hover:bg-accent/50",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
-      title={isCollapsed ? label : undefined}
     >
-      <Link to={to}>{content}</Link>
+      <Link to={disabled ? "#" : to}>{content}</Link>
     </Button>
   ) : (
     <Button
       variant="ghost"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       className={cn(
-        "w-full justify-start gap-3 mb-1",
-        isCollapsed ? "px-2" : "px-4",
-        active ? "bg-accent" : "hover:bg-accent/50"
+        "w-full justify-start gap-3 mb-1 px-4",
+        active ? "bg-accent" : "hover:bg-accent/50",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
-      title={isCollapsed ? label : undefined}
     >
       {content}
     </Button>
@@ -73,22 +68,7 @@ type SidebarContentProps = {
 }
 
 export function SidebarContent({ activeModule, onModuleChange }: SidebarContentProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebarCollapsed');
-    if (savedState) {
-      setIsCollapsed(JSON.parse(savedState));
-    }
-  }, []);
-
-  // Save collapsed state to localStorage
-  const toggleCollapse = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
-  };
+  const { isEnabled, isDisabled, isHidden } = useFeatureFlags();
 
   const handleModuleClick = (moduleName: string) => {
     if (onModuleChange) {
@@ -97,53 +77,30 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
   };
 
   const modules = [
-    { name: 'Home', icon: <Layout size={20} />, to: '/home' },
-    { name: 'Directory', icon: <Users size={20} />, to: '/directory' },
-    { name: 'Leave', icon: <Calendar size={20} />, to: '/leave' },
-    { name: 'Recruitment', icon: <UserPlus size={20} />, to: '/recruitment' },
-    { name: 'Performance', icon: <BarChart2 size={20} />, to: '/performance' },
-    { name: 'Analytics', icon: <TrendingUp size={20} /> },
-    { name: 'Engagement', icon: <Star size={20} />, to: '/engagement' },
-    { name: 'Organization', icon: <Layout size={20} /> },
-    { name: 'Resource Hub', icon: <Folders size={20} />, to: '/resource-hub' },
-    { name: 'Reporting', icon: <FileText size={20} /> },
-    { name: 'Compensation', icon: <DollarSign size={20} />, to: '/compensation' },
-    { name: 'Learning', icon: <BookOpen size={20} /> },
-    { name: 'Helpdesk', icon: <HelpCircle size={20} /> },
+    { name: 'Home', icon: <Layout size={20} />, to: '/home', featureFlag: 'home_module' },
+    { name: 'Directory', icon: <Users size={20} />, to: '/directory', featureFlag: 'directory_module' },
+    { name: 'Leave', icon: <Calendar size={20} />, to: '/leave', featureFlag: 'leave_module' },
+    { name: 'Recruitment', icon: <UserPlus size={20} />, to: '/recruitment', featureFlag: 'recruitment_module' },
+    { name: 'Performance', icon: <BarChart2 size={20} />, to: '/performance', featureFlag: 'performance_module' },
+    { name: 'Analytics', icon: <TrendingUp size={20} />, featureFlag: 'dashboard_module' },
+    { name: 'Engagement', icon: <Star size={20} />, to: '/engagement', featureFlag: 'engagement_module' },
+    { name: 'Resource Hub', icon: <Folders size={20} />, to: '/resource-hub', featureFlag: 'resource_hub_module' },
+    { name: 'Compensation', icon: <DollarSign size={20} />, to: '/compensation', featureFlag: 'compensation_module' },
+    { name: 'Learning', icon: <BookOpen size={20} />, featureFlag: 'learning_module' },
+    { name: 'Helpdesk', icon: <HelpCircle size={20} />, featureFlag: 'helpdesk_module' },
   ];
 
-  return (
-    <div 
-      className={cn(
-        "py-4 h-full flex flex-col relative transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Collapse Toggle Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -right-3 top-6 h-6 w-6 rounded-full border bg-background shadow-md"
-        onClick={toggleCollapse}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </Button>
+  // Filter modules based on feature flags
+  const visibleModules = modules.filter(module => {
+    if (!module.featureFlag) return true; // Always show modules without feature flags
+    return !isHidden(module.featureFlag);
+  });
 
-      <div className={cn(
-        "px-4 mb-4",
-        isCollapsed && "px-2"
-      )}>
-        {!isCollapsed && (
-          <h2 className="font-semibold text-lg text-center">HR Modules</h2>
-        )}
-      </div>
+  return (
+    <div className="py-4 h-full flex flex-col w-64">
 
       <div className="flex-1 overflow-auto px-2">
-        {modules.map((module) => (
+        {visibleModules.map((module) => (
           <ModuleButton 
             key={module.name}
             icon={module.icon}
@@ -151,7 +108,7 @@ export function SidebarContent({ activeModule, onModuleChange }: SidebarContentP
             active={activeModule === module.name}
             to={module.to}
             onClick={() => handleModuleClick(module.name)}
-            isCollapsed={isCollapsed}
+            disabled={module.featureFlag ? isDisabled(module.featureFlag) : false}
           />
         ))}
       </div>

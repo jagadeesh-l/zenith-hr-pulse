@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Settings, Users, BarChart3, Shield, Database, ChevronDown } from "lucide-react";
+import { Settings, Users, BarChart3, Shield, Database, ChevronDown, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,15 +12,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
 
-export function AdminPortal() {
+type AdminPortalProps = {
+  disabled?: boolean;
+};
+
+export function AdminPortal({ disabled = false }: AdminPortalProps) {
   const { user, isAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Only render for admin users
   if (!isAdmin) return null;
 
   const adminItems = [
+    {
+      icon: <Flag className="w-4 h-4" />,
+      label: "Feature Flags",
+      description: "Manage module visibility and functionality",
+      action: () => {
+        navigate('/feature-flags');
+        setIsOpen(false);
+      }
+    },
     {
       icon: <Users className="w-4 h-4" />,
       label: "User Management",
@@ -53,7 +68,12 @@ export function AdminPortal() {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="relative flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent/50 transition-all duration-200 group"
+          disabled={disabled}
+          className={`relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 group ${
+            disabled 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:bg-accent/50'
+          }`}
         >
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-gradient-hr-primary flex items-center justify-center">

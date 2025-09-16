@@ -16,6 +16,7 @@ import Recruitment from "./pages/Recruitment";
 import Performance from "./pages/Performance";
 import ResourceHub from "./pages/ResourceHub";
 import Compensation from "./pages/Compensation";
+import FeatureFlags from "./pages/FeatureFlags";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/performance" element={<Performance />} />
           <Route path="/resource-hub" element={<ResourceHub />} />
           <Route path="/compensation" element={<Compensation />} />
+          <Route path="/feature-flags" element={<FeatureFlags />} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

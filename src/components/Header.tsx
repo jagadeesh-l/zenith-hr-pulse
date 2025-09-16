@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { MenuIcon, BellIcon, Search, LogOut, User } from "lucide-react";
+import { MenuIcon, BellIcon, LogOut, User } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { AdminPortal } from "@/components/AdminPortal";
+import { SearchDropdown } from "@/components/SearchDropdown";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 
 type HeaderProps = {
   onMenuToggle: () => void;
@@ -23,6 +24,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [username, setUsername] = useState("John Doe");
   const navigate = useNavigate();
+  const { isEnabled, isHidden } = useFeatureFlags();
   
   // Add scroll listener to change header appearance when scrolled
   useEffect(() => {
@@ -52,7 +54,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           </Button>
           
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gradient-primary mr-2">HR Portal</h1>
+            <h1 className="text-xl font-bold text-gradient-primary mr-2">Zenith HR</h1>
             <span className="hidden sm:inline-flex text-xs bg-secondary/20 text-secondary px-2 py-1 rounded-full">
               AI Powered
             </span>
@@ -60,23 +62,27 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </div>
         
         <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search employees, modules, or help..."
-              className="pl-9 bg-muted/50 border-none rounded-full"
-            />
-          </div>
+          <SearchDropdown />
         </div>
         
         <div className="flex items-center space-x-3">
-          {/* Admin Portal positioned before notifications */}
-          <AdminPortal />
+          {/* Admin Portal positioned before notifications - controlled by feature flag */}
+          {!isHidden('admin_portal') && (
+            <AdminPortal disabled={!isEnabled('admin_portal')} />
+          )}
           
-          <Button variant="ghost" size="icon" className="relative">
-            <BellIcon className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
-          </Button>
+          {/* Notifications - controlled by feature flag */}
+          {!isHidden('notifications') && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`relative ${!isEnabled('notifications') ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!isEnabled('notifications')}
+            >
+              <BellIcon className="w-5 h-5" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+            </Button>
+          )}
           
           <ModeToggle />
           
