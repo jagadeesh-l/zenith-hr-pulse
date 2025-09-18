@@ -113,6 +113,14 @@ export default function Login() {
   useEffect(() => {
     const acquireAndProceed = async () => {
       if (!accounts || accounts.length === 0) return;
+      
+      // Check if user explicitly logged out - if so, don't auto-login
+      const hasLoggedOut = sessionStorage.getItem('user_logged_out');
+      if (hasLoggedOut) {
+        sessionStorage.removeItem('user_logged_out');
+        return;
+      }
+      
       try {
         const result = await instance.acquireTokenSilent({
           scopes: ["User.Read"],
@@ -132,7 +140,7 @@ export default function Login() {
   const circles = Array.from({ length: 6 }, (_, i) => i);
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800 py-4">
       {/* Background Animation Elements */}
       <div className="absolute inset-0 z-0 opacity-50">
         {circles.map((i) => (
@@ -150,15 +158,15 @@ export default function Login() {
       </div>
       
       {/* Mode Toggle */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-50">
         <ModeToggle />
       </div>
       
       {/* Main Content - Split into two columns */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Right side - Video container */}
-          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30">
+          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30 h-[600px] min-h-[500px]">
             {/* Intro Video - Always playing until login */}
             <video 
               ref={introVideoRef}
@@ -185,10 +193,10 @@ export default function Login() {
           </div>
           
           {/* Left side - SSO login */}
-          <div>
+          <div className="flex flex-col justify-center min-h-[500px]">
             <div className="mb-10 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">HR Portal</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Log in to access the HR management system</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">ZENITH</h1>
+              <p className="mt-2 text-sm text-muted-foreground">InfoServices HR Management System</p>
             </div>
             
             <div className="glass-effect rounded-xl p-6 sm:p-8 dark:bg-gray-800/30 dark:border-gray-700/30">

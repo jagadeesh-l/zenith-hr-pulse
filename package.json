@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.525.0",
-    "@azure/msal-browser": "^4.22.1",
+    "@azure/msal-browser": "^4.23.0",
     "@azure/msal-react": "^3.0.19",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",

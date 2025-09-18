@@ -17,6 +17,8 @@ export type EmployeeCardProps = {
   manager?: string;
   reporting_to?: string;
   skills?: string[];
+  expertise?: string;
+  experienceYears?: number;
   location?: string;
   dateOfBirth?: string;
   dateOfJoining?: string;
@@ -111,6 +113,8 @@ export function EmployeeCard(props: EmployeeCardProps) {
           manager: props.manager,
           reporting_to: props.reporting_to,
           skills: props.skills,
+          expertise: props.expertise,
+          experienceYears: props.experienceYears,
           location: props.location,
           dateOfBirth: props.dateOfBirth,
           dateOfJoining: props.dateOfJoining,
