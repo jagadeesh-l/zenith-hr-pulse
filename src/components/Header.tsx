@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { useMsal } from "@azure/msal-react";
 
 type HeaderProps = {
   onMenuToggle: () => void;
@@ -25,6 +26,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const [username, setUsername] = useState("John Doe");
   const navigate = useNavigate();
   const { isEnabled, isHidden } = useFeatureFlags();
+  const { instance } = useMsal();
   
   // Add scroll listener to change header appearance when scrolled
   useEffect(() => {
@@ -36,13 +38,24 @@ export function Header({ onMenuToggle }: HeaderProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSignOut = () => {
-    // Clear auth token
-    localStorage.removeItem('auth_token');
-    // Navigate to login page
-    navigate('/');
-  };
+  const handleSignOut = async () => {
+    try {
+      // Clear app auth state
+      localStorage.removeItem('auth_token');
 
+      // Prefer full redirect to clear MSAL state and prevent back navigation
+      await instance.logoutRedirect({
+        account: instance.getActiveAccount() ?? undefined,
+        postLogoutRedirectUri: window.location.origin + '/',
+      });
+
+      // Fallback navigate (usually not reached because of redirect)
+      navigate('/');
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+  
   return (
     <header className={`sticky top-0 z-30 w-full transition-all duration-300 ${
       scrolled ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm' : 'bg-transparent'
