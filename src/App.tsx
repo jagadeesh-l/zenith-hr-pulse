@@ -17,6 +17,7 @@ import Performance from "./pages/Performance";
 import ResourceHub from "./pages/ResourceHub";
 import Compensation from "./pages/Compensation";
 import FeatureFlags from "./pages/FeatureFlags";
+import RequireAuth from "@/components/RequireAuth";
 
 const queryClient = new QueryClient();
 
@@ -28,16 +29,16 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/directory" element={<Directory />} />
-          <Route path="/engagement" element={<Engagement />} />
-          <Route path="/leave" element={<Leave />} />
-          <Route path="/recruitment" element={<Recruitment />} />
-          <Route path="/performance" element={<Performance />} />
-          <Route path="/resource-hub" element={<ResourceHub />} />
-          <Route path="/compensation" element={<Compensation />} />
-          <Route path="/feature-flags" element={<FeatureFlags />} />
+          <Route path="/home" element={<RequireAuth><Home /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+          <Route path="/directory" element={<RequireAuth><Directory /></RequireAuth>} />
+          <Route path="/engagement" element={<RequireAuth><Engagement /></RequireAuth>} />
+          <Route path="/leave" element={<RequireAuth><Leave /></RequireAuth>} />
+          <Route path="/recruitment" element={<RequireAuth><Recruitment /></RequireAuth>} />
+          <Route path="/performance" element={<RequireAuth><Performance /></RequireAuth>} />
+          <Route path="/resource-hub" element={<RequireAuth><ResourceHub /></RequireAuth>} />
+          <Route path="/compensation" element={<RequireAuth><Compensation /></RequireAuth>} />
+          <Route path="/feature-flags" element={<RequireAuth><FeatureFlags /></RequireAuth>} />
           <Route path="/index" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

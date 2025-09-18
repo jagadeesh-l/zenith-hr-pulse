@@ -27,19 +27,29 @@ export function ModeToggle() {
   }, [theme]);
   
   const applyTheme = (newTheme: "light" | "dark") => {
+    console.log("Applying theme:", newTheme);
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
+      console.log("Added dark class to document");
     } else {
       document.documentElement.classList.remove("dark");
+      console.log("Removed dark class from document");
     }
   };
 
   const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
+    const newTheme = theme === "light" ? "dark" : "light";
+    console.log("Toggling theme from", theme, "to", newTheme);
+    setTheme(newTheme);
   };
 
   return (
-    <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full">
+    <Button 
+      variant="outline" 
+      size="icon" 
+      onClick={toggleTheme} 
+      className="rounded-full bg-white/90 dark:bg-gray-800/90 border-white/20 dark:border-white/10 backdrop-blur-sm"
+    >
       {theme === "light" ? (
         <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
       ) : (

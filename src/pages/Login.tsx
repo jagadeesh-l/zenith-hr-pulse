@@ -2,22 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { getFirstAvailableModuleRoute } from "@/utils/navigation";
+import { useMsal } from "@azure/msal-react";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [loginClicked, setLoginClicked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { featureFlagStatus, isLoading: flagsLoading } = useFeatureFlags();
+  const { instance, accounts } = useMsal();
   
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const loginVideoRef = useRef<HTMLVideoElement>(null);
@@ -64,84 +59,88 @@ export default function Login() {
     };
   }, [navigate, flagsLoading, featureFlagStatus]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
-      return;
+  const completeLoginWithToken = async (accessToken: string) => {
+    // Fetch user profile from Microsoft Graph
+    const graphRes = await fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!graphRes.ok) {
+      throw new Error("Failed to fetch profile from Microsoft Graph");
     }
-    
-    // Password validation
-    if (!password) {
-      toast.error("Please enter your password");
-      return;
+    const profile = await graphRes.json();
+    console.log("User Profile:", profile);
+
+    // Persist token (reuse key to minimize downstream changes)
+    localStorage.setItem('auth_token', accessToken);
+
+    // Trigger success transition and navigation/video
+    setLoginClicked(true);
+    if (introVideoRef.current) {
+      introVideoRef.current.pause();
+      introVideoRef.current.style.display = 'none';
     }
-    
-    setIsLoading(true);
-    
-    try {
-      // Update the API endpoint to match the backend
-      const response = await fetch('http://localhost:8000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email,  // Changed from email to username to match backend
-          password
-        }),
+    if (loginVideoRef.current) {
+      loginVideoRef.current.style.display = 'block';
+      loginVideoRef.current.play().catch(err => {
+        console.error("Could not play login video:", err);
+        const firstAvailableRoute = getFirstAvailableModuleRoute(featureFlagStatus);
+        navigate(firstAvailableRoute);
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        toast.error(data.detail || "Login failed");
+    }
+    toast.success("Login successful! Redirecting to dashboard...");
+  };
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Prefer redirect to avoid popup/cookie issues
+      await instance.loginRedirect({ scopes: ["User.Read"] });
+      // Flow continues after redirect back
+    } catch (err: any) {
+      // Fallback to popup if redirect fails for some reason
+      try {
+        const loginResponse = await instance.loginPopup({ scopes: ["User.Read"] });
+        await completeLoginWithToken(loginResponse.accessToken);
+      } catch (popupErr) {
+        console.error("SSO login error:", popupErr);
+        toast.error("Microsoft sign-in failed or was cancelled.");
         setIsLoading(false);
-        return;
       }
-      
-      // Store token in localStorage
-      localStorage.setItem('auth_token', data.access_token);
-      
-      // Set login clicked to start the transition video
-      setLoginClicked(true);
-      
-      // Hide intro video and show login video
-      if (introVideoRef.current) {
-        introVideoRef.current.pause();
-        introVideoRef.current.style.display = 'none';
-      }
-      
-      if (loginVideoRef.current) {
-        loginVideoRef.current.style.display = 'block';
-        
-        // Try to play the video, but if it fails, navigate anyway
-        loginVideoRef.current.play().catch(err => {
-          console.error("Could not play login video:", err);
-          navigate("/home");
-        });
-      }
-      
-      toast.success("Login successful! Redirecting to dashboard...");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Connection error. Please try again.");
-      setIsLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  // After redirect, if we have an account, acquire token silently and continue
+  useEffect(() => {
+    const acquireAndProceed = async () => {
+      if (!accounts || accounts.length === 0) return;
+      
+      // Check if user explicitly logged out - if so, don't auto-login
+      const hasLoggedOut = sessionStorage.getItem('user_logged_out');
+      if (hasLoggedOut) {
+        sessionStorage.removeItem('user_logged_out');
+        return;
+      }
+      
+      try {
+        const result = await instance.acquireTokenSilent({
+          scopes: ["User.Read"],
+          account: accounts[0],
+        });
+        await completeLoginWithToken(result.accessToken);
+      } catch (silentErr) {
+        // If silent fails, let user click button again
+        setIsLoading(false);
+      }
+    };
+    acquireAndProceed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts?.[0]?.homeAccountId]);
 
   // Animation elements for the background
   const circles = Array.from({ length: 6 }, (_, i) => i);
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800 py-4">
       {/* Background Animation Elements */}
       <div className="absolute inset-0 z-0 opacity-50">
         {circles.map((i) => (
@@ -159,15 +158,15 @@ export default function Login() {
       </div>
       
       {/* Mode Toggle */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-50">
         <ModeToggle />
       </div>
       
       {/* Main Content - Split into two columns */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Right side - Video container */}
-          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30">
+          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30 h-[600px] min-h-[500px]">
             {/* Intro Video - Always playing until login */}
             <video 
               ref={introVideoRef}
@@ -193,103 +192,25 @@ export default function Login() {
             </video>
           </div>
           
-          {/* Left side - Login form */}
-          <div>
+          {/* Left side - SSO login */}
+          <div className="flex flex-col justify-center min-h-[500px]">
             <div className="mb-10 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">HR Portal</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Log in to access the HR management system</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">ZENITH</h1>
+              <p className="mt-2 text-sm text-muted-foreground">InfoServices HR Management System</p>
             </div>
             
             <div className="glass-effect rounded-xl p-6 sm:p-8 dark:bg-gray-800/30 dark:border-gray-700/30">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <label htmlFor="email" className="block text-sm font-medium">
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow"
-                    disabled={isLoading || loginClicked}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="password" className="block text-sm font-medium">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full rounded-xl bg-white/50 dark:bg-gray-800/50 dark:border-gray-700 input-glow pr-10"
-                      disabled={isLoading || loginClicked}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={togglePasswordVisibility}
-                      tabIndex={-1}
-                      disabled={isLoading || loginClicked}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-                {/* Update Button for autofill */}
-                <Button
-                  type="button"
-                  className="w-full mb-2 bg-blue-500 hover:bg-blue-600"
-                  onClick={() => {
-                    setEmail('user@example.com');
-                    setPassword('user123');
-                  }}
-                  disabled={isLoading || loginClicked}
-                >
-                  Update
-                </Button>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="remember-me" 
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(!!checked)}
-                      disabled={isLoading || loginClicked}
-                    />
-                    <label htmlFor="remember-me" className="text-sm">
-                      Remember me
-                    </label>
-                  </div>
-                  
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
-                
+              <div className="space-y-6">
                 <Button 
-                  type="submit" 
+                  type="button" 
                   className="w-full bg-gradient-hr-primary hover:opacity-90" 
                   size="lg"
+                  onClick={handleLogin}
                   disabled={isLoading || loginClicked}
                 >
-                  {isLoading ? "Signing In..." : loginClicked ? "Signed In" : "Sign In"}
+                  {isLoading ? "Signing In..." : loginClicked ? "Signed In" : "Sign in with Microsoft"}
                 </Button>
-                
-                {/* Demo credentials */}
-                <div className="text-center text-sm text-muted-foreground mt-4">
-                  <p>Demo login: admin@example.com / admin123</p>
-                  <p>or: user@example.com / user123</p>
-                </div>
-              </form>
+              </div>
             </div>
           </div>
         </div>
