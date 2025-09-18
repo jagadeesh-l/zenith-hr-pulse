@@ -157,6 +157,10 @@ async def create_employee(
     # Additional information
     bio: Optional[str] = Form(None),
     start_date: Optional[str] = Form(None),
+    skills: Optional[str] = Form(None),
+    expertise: Optional[str] = Form(None),
+    experience_years: Optional[int] = Form(None),
+    reporting_to: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None)
 ):
     """Create a new employee with optional photo upload"""
@@ -207,6 +211,10 @@ async def create_employee(
             "date_of_joining": doj.isoformat() if doj else None,
             "bio": bio or "",
             "start_date": start_date,
+            "skills": skills.split(',') if skills else [],
+            "expertise": expertise or "",
+            "experience_years": experience_years or 0,
+            "reporting_to": reporting_to or "",
             "photo_url": photo_url,
             "created_at": datetime.datetime.now().date().isoformat(),
             "updated_at": datetime.datetime.now().date().isoformat()
@@ -327,7 +335,7 @@ async def import_employees_csv(
             "EmployeeID", "FirstName", "LastName", "EmploymentCategory", 
             "Gender", "EmployeeStatus", "Account", "Department", 
             "IsLeader", "Location", "Mobile", "Dob", "Doj", 
-            "Email", "Position", "ProfilePic"
+            "Email", "Position", "ProfilePic", "Expertise"
         ]
         
         # Check for missing required columns
@@ -401,6 +409,7 @@ async def import_employees_csv(
                     "date_of_joining": doj.isoformat() if doj else None,
                     "profile_pic": row.get("ProfilePic", ""),
                     "photo_url": row.get("ProfilePic", ""),  # Map ProfilePic to photo_url for compatibility
+                    "expertise": row.get("Expertise", ""),
                     "created_at": now.isoformat(),
                     "updated_at": now.isoformat()
                 }
@@ -768,6 +777,7 @@ async def create_employee_with_photo(
     bio: Optional[str] = Form(None),
     start_date: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
+    expertise: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None)
 ):
     """Create a new employee with optional photo upload"""
@@ -791,6 +801,7 @@ async def create_employee_with_photo(
             "bio": bio,
             "start_date": start_date,
             "location": location,
+            "expertise": expertise,
             "photo_url": photo_url,
             "created_at": datetime.datetime.now().date().isoformat(),
             "updated_at": datetime.datetime.now().date().isoformat()

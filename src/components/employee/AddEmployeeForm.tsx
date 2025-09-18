@@ -45,10 +45,16 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
     dateOfJoining: '',
     bio: '',
     startDate: '',
-    manager: ''
+    manager: 'none',
+    skills: '',
+    expertise: '',
+    experienceYears: ''
   });
 
-  const { createEmployee } = useEmployees();
+  const { createEmployee, employees } = useEmployees();
+  
+  // Get available managers for dropdown
+  const managers = employees.filter(emp => emp.id);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -85,6 +91,9 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
       return;
     }
     
+    // Convert skills string to array
+    const skillsArray = formData.skills ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill) : [];
+    
     const newEmployee = await createEmployee({
       employeeId: formData.employeeId,
       firstName: formData.firstName,
@@ -105,6 +114,10 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
       dateOfJoining: formData.dateOfJoining,
       bio: formData.bio,
       startDate: formData.startDate,
+      skills: skillsArray,
+      expertise: formData.expertise,
+      experienceYears: formData.experienceYears ? parseInt(formData.experienceYears) : 0,
+      reporting_to: formData.manager === 'none' ? '' : formData.manager,
       photoUrl: photo || undefined
     });
     
@@ -130,7 +143,10 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
         dateOfJoining: '',
         bio: '',
         startDate: '',
-        manager: ''
+        manager: 'none',
+        skills: '',
+        expertise: '',
+        experienceYears: ''
       });
       setPhoto(null);
       setPhotoPreview(null);
@@ -140,12 +156,13 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Add New Employee</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-6 p-1">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Left column - Photo upload */}
             <div className="md:w-1/3">
@@ -191,6 +208,16 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
             
             {/* Right column - Form fields */}
             <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="employeeId">Employee ID</Label>
+                <Input 
+                  id="employeeId" 
+                  name="employeeId"
+                  value={formData.employeeId}
+                  onChange={handleChange}
+                />
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
                 <Input 
@@ -254,6 +281,48 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
               </div>
               
               <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input 
+                  id="location" 
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Input 
+                  id="gender" 
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input 
+                  id="dateOfBirth" 
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dateOfJoining">Date of Joining</Label>
+                <Input 
+                  id="dateOfJoining" 
+                  name="dateOfJoining"
+                  type="date"
+                  value={formData.dateOfJoining}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
                 <Input 
                   id="startDate" 
@@ -264,13 +333,59 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
                 />
               </div>
               
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="manager">Manager</Label>
-                <Input 
-                  id="manager" 
-                  name="manager"
+                <Select 
+                  onValueChange={(value) => handleSelectChange('manager', value)}
                   value={formData.manager}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Manager</SelectItem>
+                    {managers.map(manager => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name} ({manager.position})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="skills">Skills (comma-separated)</Label>
+                <Input 
+                  id="skills" 
+                  name="skills"
+                  value={formData.skills}
                   onChange={handleChange}
+                  placeholder="Enter skills separated by commas (e.g., React, Node.js, Python)"
+                />
+              </div>
+              
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="expertise">Expertise</Label>
+                <Input 
+                  id="expertise" 
+                  name="expertise"
+                  value={formData.expertise}
+                  onChange={handleChange}
+                  placeholder="Enter area of expertise (e.g., Frontend Development, Data Science)"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="experienceYears">Experience Years</Label>
+                <Input 
+                  id="experienceYears" 
+                  name="experienceYears"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={formData.experienceYears}
+                  onChange={handleChange}
+                  placeholder="Enter years of experience"
                 />
               </div>
               
@@ -287,11 +402,12 @@ export function AddEmployeeForm({ isOpen, onClose, departments }: AddEmployeeFor
             </div>
           </div>
           
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Add Employee</Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit">Add Employee</Button>
+            </div>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -55,9 +55,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
           
           <div className="flex items-center">
             <h1 className="text-xl font-bold text-gradient-primary mr-2">Zenith HR</h1>
-            <span className="hidden sm:inline-flex text-xs bg-secondary/20 text-secondary px-2 py-1 rounded-full">
-              AI Powered
-            </span>
           </div>
         </div>
         

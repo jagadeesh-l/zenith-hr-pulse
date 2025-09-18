@@ -53,12 +53,22 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
         !emp.reporting_to || !employees.find(e => e.id === emp.reporting_to)
       );
 
-      // Calculate direct reports count for each employee
-      const directReportsCount = new Map<string, number>();
+      // Calculate total descendants count (including children of children) for each employee
+      const calculateTotalDescendants = (employeeId: string): number => {
+        const directReports = employees.filter(emp => emp.reporting_to === employeeId);
+        let totalCount = directReports.length;
+        
+        // Recursively count children of children
+        directReports.forEach(child => {
+          totalCount += calculateTotalDescendants(child.id);
+        });
+        
+        return totalCount;
+      };
+
+      const totalDescendantsCount = new Map<string, number>();
       employees.forEach(emp => {
-        if (emp.reporting_to) {
-          directReportsCount.set(emp.reporting_to, (directReportsCount.get(emp.reporting_to) || 0) + 1);
-        }
+        totalDescendantsCount.set(emp.id, calculateTotalDescendants(emp.id));
       });
 
       // Create initial hierarchy nodes
@@ -68,7 +78,7 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
         isExpanded: false,
         isLoading: false,
         hasLoaded: false,
-        directReportsCount: directReportsCount.get(employee.id) || 0,
+        directReportsCount: totalDescendantsCount.get(employee.id) || 0,
         level
       });
 
@@ -93,12 +103,22 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
       // Find direct reports
       const directReports = employees.filter(emp => emp.reporting_to === nodeId);
       
-      // Calculate direct reports count for each child
-      const directReportsCount = new Map<string, number>();
+      // Calculate total descendants count (including children of children) for each employee
+      const calculateTotalDescendants = (employeeId: string): number => {
+        const directReports = employees.filter(emp => emp.reporting_to === employeeId);
+        let totalCount = directReports.length;
+        
+        // Recursively count children of children
+        directReports.forEach(child => {
+          totalCount += calculateTotalDescendants(child.id);
+        });
+        
+        return totalCount;
+      };
+
+      const totalDescendantsCount = new Map<string, number>();
       employees.forEach(emp => {
-        if (emp.reporting_to) {
-          directReportsCount.set(emp.reporting_to, (directReportsCount.get(emp.reporting_to) || 0) + 1);
-        }
+        totalDescendantsCount.set(emp.id, calculateTotalDescendants(emp.id));
       });
 
       // Create child nodes
@@ -108,7 +128,7 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
         isExpanded: false,
         isLoading: false,
         hasLoaded: false,
-        directReportsCount: directReportsCount.get(emp.id) || 0,
+        directReportsCount: totalDescendantsCount.get(emp.id) || 0,
         level: (employees.find(e => e.id === nodeId)?.reporting_to ? 
           employees.find(e => e.id === nodeId)!.reporting_to!.split('.').length : 0) + 1
       }));
@@ -218,7 +238,7 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
           tabIndex={0}
           role="button"
           aria-expanded={isExpanded}
-          aria-label={`${node.employee.name}, ${node.position}, ${node.directReportsCount} direct reports`}
+          aria-label={`${node.employee.name}, ${node.position}, ${node.directReportsCount} team members`}
         >
           {/* Expand/Collapse Button */}
           <div className="flex items-center justify-center w-6 h-6">

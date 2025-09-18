@@ -36,6 +36,8 @@ class EmployeeBase(BaseModel):
     manager_id: Optional[str] = None
     reporting_to: Optional[str] = None  # Employee ID of the person they report to
     skills: Optional[List[str]] = []
+    expertise: Optional[str] = None      # Employee's area of expertise
+    experience_years: Optional[int] = None  # Years of experience
     performance_communication: Optional[float] = 0.0
     performance_leadership: Optional[float] = 0.0
     performance_client_feedback: Optional[float] = 0.0
@@ -76,6 +78,8 @@ class EmployeeUpdate(BaseModel):
     manager_id: Optional[str] = None
     reporting_to: Optional[str] = None
     skills: Optional[List[str]] = None
+    expertise: Optional[str] = None
+    experience_years: Optional[int] = None
 
 class EmployeeInDB(EmployeeBase):
     id: str

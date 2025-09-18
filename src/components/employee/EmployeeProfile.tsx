@@ -32,6 +32,8 @@ interface EmployeeProfileProps {
     bio?: string;
     startDate?: string;
     skills?: string[];
+    expertise?: string;
+    experienceYears?: number;
     manager?: string;
     reporting_to?: string;
     location?: string;
@@ -56,6 +58,11 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
   
   // Ensure departments array is not empty and has valid values
   const validDepartments = departments.filter(dept => dept && dept.trim() !== '');
+
+  // Sync profileData with employee prop when it changes
+  useEffect(() => {
+    setProfileData(employee);
+  }, [employee]);
 
   // Find manager name from reporting_to UUID
   useEffect(() => {
@@ -130,6 +137,8 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         bio: profileData.bio,
         photoUrl: profileData.photoUrl,
         skills: profileData.skills,
+        expertise: profileData.expertise,
+        experienceYears: profileData.experienceYears,
         location: profileData.location,
         gender: profileData.gender,
         dateOfBirth: profileData.dateOfBirth,
@@ -164,8 +173,9 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
       setIsEditing(false);
       onClose();
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        {/* Fixed Header Section */}
+        <DialogHeader className="flex-shrink-0 border-b pb-4">
           <DialogTitle className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
               <AvatarImage src={profileData.photoUrl} alt={profileData.name} />
@@ -201,7 +211,9 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-6 p-1">
           {/* Profile Picture Section */}
           {isEditing && (
             <Card>
@@ -477,6 +489,66 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
               )}
             </CardContent>
           </Card>
+
+          {/* Expertise Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Award className="h-5 w-5" />
+                Expertise
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <Label htmlFor="expertise">Expertise</Label>
+                  <Input 
+                    id="expertise" 
+                    name="expertise"
+                    value={profileData.expertise || ''} 
+                    onChange={handleChange}
+                    placeholder="Enter area of expertise (e.g., Frontend Development, Data Science)"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {profileData.expertise || 'No expertise provided'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Experience Years Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Experience Years
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <Label htmlFor="experienceYears">Experience Years</Label>
+                  <Input 
+                    id="experienceYears" 
+                    name="experienceYears"
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={profileData.experienceYears || ''} 
+                    onChange={handleChange}
+                    placeholder="Enter years of experience"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {profileData.experienceYears ? `${profileData.experienceYears} years` : 'No experience provided'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

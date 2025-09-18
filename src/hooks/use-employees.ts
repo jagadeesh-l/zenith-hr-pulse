@@ -17,6 +17,8 @@ export interface Employee {
   manager?: string;
   reporting_to?: string;
   skills?: string[];
+  expertise?: string;
+  experienceYears?: number;
   location?: string;
   dateOfBirth?: string;
   dateOfJoining?: string;
@@ -70,6 +72,8 @@ export function useEmployees() {
         manager: emp.reporting_to || "", // Map manager to reporting_to field
         reporting_to: emp.reporting_to || "",
         skills: emp.skills || [],
+        expertise: emp.expertise || "",
+        experienceYears: emp.experience_years || 0,
         location: emp.location || "",
         dateOfBirth: emp.date_of_birth || "",
         dateOfJoining: emp.date_of_joining || "",
@@ -233,7 +237,9 @@ export function useEmployees() {
           start_date: formattedData.start_date,
           photo_url: formattedData.photoUrl,
           reporting_to: formattedData.reporting_to,
-          skills: formattedData.skills
+          skills: formattedData.skills,
+          expertise: formattedData.expertise,
+          experience_years: formattedData.experienceYears
         }),
       });
       
@@ -256,7 +262,9 @@ export function useEmployees() {
         startDate: data.start_date,
         manager: data.manager_name,
         reporting_to: data.reporting_to,
-        skills: data.skills
+        skills: data.skills,
+        expertise: data.expertise,
+        experienceYears: data.experience_years
       };
       
       setEmployees(employees.map(emp => 
