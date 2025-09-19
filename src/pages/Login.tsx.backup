@@ -70,53 +70,8 @@ export default function Login() {
     const profile = await graphRes.json();
     console.log("User Profile:", profile);
 
-    // Exchange MSAL token for backend token
-    try {
-      console.log("Attempting to exchange MSAL token for backend token...");
-      console.log("MSAL token (first 20 chars):", accessToken.substring(0, 20) + "...");
-      
-      const backendRes = await fetch("http://localhost:8000/api/auth/msal-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ msal_token: accessToken }),
-      });
-      
-      console.log("Backend response status:", backendRes.status);
-      console.log("Backend response headers:", Object.fromEntries(backendRes.headers.entries()));
-      
-      if (backendRes.ok) {
-        const tokenData = await backendRes.json();
-        console.log("Token exchange response:", tokenData);
-        
-        // Store the backend token instead of MSAL token
-        localStorage.setItem('auth_token', tokenData.access_token);
-        console.log("Backend token stored successfully:", tokenData.access_token.substring(0, 20) + "...");
-        
-        // Verify the token was stored correctly
-        const storedToken = localStorage.getItem('auth_token');
-        console.log("Verification - stored token:", storedToken ? storedToken.substring(0, 20) + "..." : "No token found");
-      } else {
-        const errorText = await backendRes.text();
-        console.error("Failed to get backend token:", backendRes.status, errorText);
-        // Fallback: store MSAL token (will cause 401 errors)
-        localStorage.setItem('auth_token', accessToken);
-        console.log("FALLBACK: Stored MSAL token instead");
-      }
-    } catch (error) {
-      console.error("Error exchanging MSAL token:", error);
-      // Fallback: store MSAL token (will cause 401 errors)
-      localStorage.setItem('auth_token', accessToken);
-      console.log("FALLBACK: Stored MSAL token due to error");
-    }
-
-    // Wait a moment to ensure token is stored before proceeding
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Verify token is still stored after the delay
-    const finalToken = localStorage.getItem('auth_token');
-    console.log("Final verification - token still stored:", finalToken ? finalToken.substring(0, 20) + "..." : "No token found");
+    // Persist token (reuse key to minimize downstream changes)
+    localStorage.setItem('auth_token', accessToken);
 
     // Trigger success transition and navigation/video
     setLoginClicked(true);
@@ -158,14 +113,6 @@ export default function Login() {
   useEffect(() => {
     const acquireAndProceed = async () => {
       if (!accounts || accounts.length === 0) return;
-      
-      // Check if user explicitly logged out - if so, don't auto-login
-      const hasLoggedOut = sessionStorage.getItem('user_logged_out');
-      if (hasLoggedOut) {
-        sessionStorage.removeItem('user_logged_out');
-        return;
-      }
-      
       try {
         const result = await instance.acquireTokenSilent({
           scopes: ["User.Read"],
@@ -181,27 +128,11 @@ export default function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts?.[0]?.homeAccountId]);
 
-  // Add storage event listener to track auth_token changes
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth_token') {
-        console.log("AUTH_TOKEN STORAGE EVENT:", {
-          oldValue: e.oldValue ? e.oldValue.substring(0, 20) + "..." : null,
-          newValue: e.newValue ? e.newValue.substring(0, 20) + "..." : null,
-          url: e.url
-        });
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
   // Animation elements for the background
   const circles = Array.from({ length: 6 }, (_, i) => i);
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800 py-4">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-hr-primary/10 to-hr-secondary/5 dark:from-slate-900 dark:to-slate-800">
       {/* Background Animation Elements */}
       <div className="absolute inset-0 z-0 opacity-50">
         {circles.map((i) => (
@@ -219,15 +150,15 @@ export default function Login() {
       </div>
       
       {/* Mode Toggle */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4 z-10">
         <ModeToggle />
       </div>
       
       {/* Main Content - Split into two columns */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Right side - Video container */}
-          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30 h-[600px] min-h-[500px]">
+          <div className="hidden lg:flex items-center justify-center rounded-xl glass-effect p-8 relative overflow-hidden dark:bg-gray-800/30">
             {/* Intro Video - Always playing until login */}
             <video 
               ref={introVideoRef}
@@ -254,10 +185,10 @@ export default function Login() {
           </div>
           
           {/* Left side - SSO login */}
-          <div className="flex flex-col justify-center min-h-[500px]">
+          <div>
             <div className="mb-10 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">ZENITH</h1>
-              <p className="mt-2 text-sm text-muted-foreground">InfoServices HR Management System</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gradient-primary dark:text-white">HR Portal</h1>
+              <p className="mt-2 text-sm text-muted-foreground">Log in to access the HR management system</p>
             </div>
             
             <div className="glass-effect rounded-xl p-6 sm:p-8 dark:bg-gray-800/30 dark:border-gray-700/30">

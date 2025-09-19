@@ -56,7 +56,15 @@ class DynamoDBService:
                 "AttributeDefinitions": [
                     {"AttributeName": "id", "AttributeType": "S"},
                     {"AttributeName": "department", "AttributeType": "S"},
-                    {"AttributeName": "email", "AttributeType": "S"}
+                    {"AttributeName": "email", "AttributeType": "S"},
+                    {"AttributeName": "location", "AttributeType": "S"},
+                    {"AttributeName": "employee_status", "AttributeType": "S"},
+                    {"AttributeName": "employment_category", "AttributeType": "S"},
+                    {"AttributeName": "is_leader", "AttributeType": "S"},
+                    {"AttributeName": "position", "AttributeType": "S"},
+                    {"AttributeName": "gender", "AttributeType": "S"},
+                    {"AttributeName": "account", "AttributeType": "S"},
+                    {"AttributeName": "created_at", "AttributeType": "S"}
                 ],
                 "GlobalSecondaryIndexes": [
                     {
@@ -65,7 +73,7 @@ class DynamoDBService:
                             {"AttributeName": "department", "KeyType": "HASH"}
                         ],
                         "Projection": {"ProjectionType": "ALL"},
-                        "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
                     },
                     {
                         "IndexName": "EmailIndex",
@@ -74,9 +82,73 @@ class DynamoDBService:
                         ],
                         "Projection": {"ProjectionType": "ALL"},
                         "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "LocationIndex",
+                        "KeySchema": [
+                            {"AttributeName": "location", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "StatusIndex",
+                        "KeySchema": [
+                            {"AttributeName": "employee_status", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "CategoryIndex",
+                        "KeySchema": [
+                            {"AttributeName": "employment_category", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "LeaderIndex",
+                        "KeySchema": [
+                            {"AttributeName": "is_leader", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "PositionIndex",
+                        "KeySchema": [
+                            {"AttributeName": "position", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "GenderIndex",
+                        "KeySchema": [
+                            {"AttributeName": "gender", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "AccountIndex",
+                        "KeySchema": [
+                            {"AttributeName": "account", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 10, "WriteCapacityUnits": 5}
+                    },
+                    {
+                        "IndexName": "CreatedAtIndex",
+                        "KeySchema": [
+                            {"AttributeName": "created_at", "KeyType": "HASH"}
+                        ],
+                        "Projection": {"ProjectionType": "ALL"},
+                        "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
                     }
                 ],
-                "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
+                "ProvisionedThroughput": {"ReadCapacityUnits": 20, "WriteCapacityUnits": 10}
             },
             "users": {
                 "KeySchema": [

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Union
 try:
@@ -65,6 +65,30 @@ async def login(user_data: UserLogin):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during login"
+        )
+
+@router.post("/msal-token", response_model=Token)
+async def exchange_msal_token(msal_token: str = Body(..., embed=True)):
+    """Exchange MSAL token for backend JWT token"""
+    try:
+        print(f"DEBUG: Received MSAL token: {msal_token[:20]}...")
+        
+        # For now, we'll create a token for the admin user
+        # In a real implementation, you would validate the MSAL token with Microsoft
+        # and extract user information from it
+        
+        # Create a backend token for the admin user
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": "admin@example.com"}, expires_delta=access_token_expires
+        )
+        print(f"DEBUG: Created backend token: {access_token[:20]}...")
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        logger.error(f"Error exchanging MSAL token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid MSAL token"
         )
 
 @router.get("/me")

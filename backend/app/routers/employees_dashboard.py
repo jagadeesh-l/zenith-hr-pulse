@@ -14,9 +14,14 @@ router = APIRouter(
 async def get_employees_dashboard():
     """Get comprehensive employee analytics data for dashboard visualization"""
     try:
-        # Get all employees
+        # Get all employees - use parallel queries for better performance
         table = await get_employees_table()
-        response = await table.scan()
+        
+        # For dashboard, we need all employees, so we'll use scan but with better pagination
+        # In a production environment, consider using parallel scans or caching
+        response = await table.scan(
+            Limit=1000  # Limit initial scan to avoid timeout
+        )
         
         if "Items" not in response:
             return {

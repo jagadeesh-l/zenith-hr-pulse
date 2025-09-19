@@ -5,11 +5,7 @@ from ..database_dynamodb import get_employees_table, parse_dynamodb_item, format
 from ..security import get_current_active_user
 import time
 
-router = APIRouter(
-    prefix="/api/employees",
-    tags=["employees"],
-    responses={404: {"description": "Not found"}},
-)
+router = APIRouter()
 
 @router.get("", response_model=List[EmployeeInDB])
 @router.get("/", response_model=List[EmployeeInDB])
@@ -142,36 +138,22 @@ async def update_employee(employee_id: str, employee_update: EmployeeUpdate):
         if "Item" not in response:
             raise HTTPException(status_code=404, detail="Employee not found")
         
-        # Parse existing employee data
-        existing_employee = parse_dynamodb_item(response["Item"])
-        print(f"DEBUG: Existing employee data: {existing_employee}")
-        
-        # Get update data (only fields that are being updated)
+        # Update fields
         update_data = employee_update.dict(exclude_unset=True)
-        print(f"DEBUG: Update data: {update_data}")
-        
-        # Merge existing data with update data
-        merged_data = existing_employee.copy()
-        merged_data.update(update_data)
-        merged_data["updated_at"] = time.strftime("%Y-%m-%d")
-        
-        print(f"DEBUG: Merged data: {merged_data}")
+        update_data["updated_at"] = time.strftime("%Y-%m-%d")
         
         # Convert to DynamoDB format and update
-        dynamodb_item = format_dynamodb_item(merged_data)
+        dynamodb_item = format_dynamodb_item(update_data)
         
         # Update in DynamoDB
         await table.put_item(Item=dynamodb_item)
         
         # Return updated employee
-        return EmployeeInDB(**merged_data)
+        return EmployeeInDB(**update_data)
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"DEBUG: Error in update_employee: {e}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update employee: {str(e)}")
 
 @router.delete("/{employee_id}", status_code=204)

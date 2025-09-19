@@ -84,6 +84,14 @@ export default function Directory() {
     
     return true;
   });
+
+  // Debug logging
+  console.log('Directory component state:', {
+    employees: employees.length,
+    isLoading,
+    error,
+    filteredEmployees: filteredEmployees.length
+  });
   
   return (
     <div className="min-h-screen bg-background">
@@ -210,6 +218,31 @@ export default function Directory() {
               {isLoading ? (
                 <div className="flex justify-center items-center py-12">
                   <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+                  <span className="ml-3 text-muted-foreground">Loading employees...</span>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-destructive text-lg font-semibold mb-2">Error Loading Employees</div>
+                  <div className="text-muted-foreground mb-4">{error}</div>
+                  <Button onClick={() => window.location.reload()} variant="outline">
+                    Retry
+                  </Button>
+                </div>
+              ) : filteredEmployees.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-muted-foreground text-lg font-semibold mb-2">No Employees Found</div>
+                  <div className="text-muted-foreground mb-4">
+                    {employees.length === 0 
+                      ? "No employees have been added yet. Click 'Add Employee' to get started."
+                      : "No employees match your current filters. Try adjusting your filters."
+                    }
+                  </div>
+                  {employees.length === 0 && (
+                    <Button onClick={() => setShowAddEmployee(true)} variant="default">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Employee
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <>

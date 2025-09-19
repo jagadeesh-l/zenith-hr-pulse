@@ -62,6 +62,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     """Get current user from token."""
+    print(f"DEBUG: Received token: {token[:20]}..." if token else "DEBUG: No token received")
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -70,12 +72,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        print(f"DEBUG: Decoded username: {username}")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        print(f"DEBUG: JWT decode error: {str(e)}")
         raise credentials_exception
     user = get_user(username=token_data.username)
+    print(f"DEBUG: Found user: {user is not None}")
     if user is None:
         raise credentials_exception
     return user

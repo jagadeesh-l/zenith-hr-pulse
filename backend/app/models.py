@@ -11,7 +11,7 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    email: str | None = None
+    username: str | None = None
 
 # Mock user database for this example
 # In production, this would be a real database

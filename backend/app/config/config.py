@@ -15,19 +15,28 @@ class Config:
     
     def _load_configs(self):
         # Get the base path for config files
-        base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config')
+        # When running from backend/ directory, config files are in backend/config/
+        base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'config')
+        base_path = os.path.abspath(base_path)
+        print(f"DEBUG: Config base path: {base_path}")
         
         # Load main configuration
         config_path = os.path.join(base_path, 'config.yaml')
         if os.path.exists(config_path):
             with open(config_path, 'r') as file:
                 self._config_data = yaml.safe_load(file)
+                print(f"DEBUG: Loaded config.yaml: {self._config_data}")
+        else:
+            print(f"DEBUG: config.yaml not found at {config_path}")
                 
         # Load feature flags
         flags_path = os.path.join(base_path, 'feature_flags.yaml')
         if os.path.exists(flags_path):
             with open(flags_path, 'r') as file:
                 self._feature_flags = yaml.safe_load(file)
+                print(f"DEBUG: Loaded feature_flags.yaml: {self._feature_flags}")
+        else:
+            print(f"DEBUG: feature_flags.yaml not found at {flags_path}")
     
     def get(self, path: str, default=None) -> Any:
         """
@@ -48,7 +57,10 @@ class Config:
     def get_feature_flag(self, feature_name: str) -> bool:
         """Get the status of a feature flag"""
         features = self._feature_flags.get('features', {})
-        return features.get(feature_name, False)
+        result = features.get(feature_name, False)
+        print(f"DEBUG: get_feature_flag('{feature_name}') -> {result}")
+        print(f"DEBUG: Available features: {features}")
+        return result
     
     def get_role_permissions(self, role: str) -> Dict[str, bool]:
         """Get permissions for a specific role"""
