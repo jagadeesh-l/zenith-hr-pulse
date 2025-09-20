@@ -51,6 +51,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
   const [photo, setPhoto] = useState<File | null>(null);
   const [managerName, setManagerName] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [skillsInput, setSkillsInput] = useState<string>('');
   const { toast } = useToast();
   const isAdmin = true; // For demo purposes, assume admin
   const { updateEmployee, employees, fetchEmployees } = useEmployees();
@@ -82,6 +83,8 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
   // Update profileData when employee prop changes
   useEffect(() => {
     setProfileData(employee);
+    // Initialize skills input with current skills
+    setSkillsInput(employee.skills ? employee.skills.join(', ') : '');
   }, [employee]);
 
   // Update profileData when employees list changes (in case of updates from other components)
@@ -92,15 +95,22 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         ...updatedEmployee,
         photoUrl: updatedEmployee.photoUrl || ""
       });
+      // Also update skills input
+      setSkillsInput(updatedEmployee.skills ? updatedEmployee.skills.join(', ') : '');
     }
   }, [employees, employee.id]);
 
-  // Get unique departments and managers for dropdowns
+  // Get unique departments, locations, and managers for dropdowns
   const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))];
+  const locations = [...new Set(employees.map(emp => emp.location).filter(Boolean))];
   const managers = employees.filter(emp => emp.id !== employee.id); // Exclude current employee
   
-  // Ensure departments array is not empty and has valid values
+  // Ensure arrays are not empty and have valid values
   const validDepartments = departments.filter(dept => dept && dept.trim() !== '');
+  const validLocations = locations.filter(loc => loc && loc.trim() !== '');
+  
+  // Gender options
+  const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
   // Sync profileData with employee prop when it changes
   useEffect(() => {
@@ -196,6 +206,9 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
           return newData;
         });
         
+        // Update skills input with the new skills
+        setSkillsInput(updatedEmployee.skills ? updatedEmployee.skills.join(', ') : '');
+        
         // Force refresh the global employees list to ensure Directory gets updated
         console.log("🔄 Refreshing global employees list...");
         await fetchEmployees();
@@ -222,6 +235,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
 
   const handleCancel = () => {
     setProfileData(employee); // Reset to original data
+    setSkillsInput(employee.skills ? employee.skills.join(', ') : ''); // Reset skills input
     setPhoto(null); // Clear selected photo
     setIsEditing(false);
   };
@@ -395,14 +409,34 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                 {/* Location */}
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input 
-                    id="location"
-                    name="location"
-                    value={profileData.location || ''} 
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className={!isEditing ? "bg-muted" : ""}
-                  />
+                  {isEditing ? (
+                    <Select 
+                      value={profileData.location || 'none'} 
+                      onValueChange={(value) => setProfileData(prev => ({ ...prev, location: value === 'none' ? '' : value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Location</SelectItem>
+                        {validLocations.length > 0 ? (
+                          validLocations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>No locations available</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      value={profileData.location || 'Not provided'} 
+                      disabled
+                      className="bg-muted"
+                    />
+                  )}
                 </div>
 
                 {/* Department */}
@@ -469,14 +503,30 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                 {/* Gender */}
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
-                  <Input 
-                    id="gender"
-                    name="gender"
-                    value={profileData.gender || ''} 
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className={!isEditing ? "bg-muted" : ""}
-                  />
+                  {isEditing ? (
+                    <Select 
+                      value={profileData.gender || 'none'} 
+                      onValueChange={(value) => setProfileData(prev => ({ ...prev, gender: value === 'none' ? '' : value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Prefer not to say</SelectItem>
+                        {genderOptions.map((gender) => (
+                          <SelectItem key={gender} value={gender}>
+                            {gender}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      value={profileData.gender || 'Not provided'} 
+                      disabled
+                      className="bg-muted"
+                    />
+                  )}
                 </div>
 
                 {/* Date of Birth */}
@@ -552,16 +602,31 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                   <Input 
                     id="skills" 
                     name="skills"
-                    value={profileData.skills ? profileData.skills.join(', ') : ''} 
+                    value={skillsInput} 
                     onChange={(e) => {
-                      const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill);
+                      // Allow user to type freely, including commas
+                      setSkillsInput(e.target.value);
+                    }}
+                    onBlur={() => {
+                      // Convert to skills array when user finishes typing
+                      const skillsArray = skillsInput.split(',').map(skill => skill.trim()).filter(skill => skill);
                       setProfileData(prev => ({ ...prev, skills: skillsArray }));
                     }}
-                    placeholder="Enter skills separated by commas (e.g., React, Node.js, Python)"
+                    placeholder="Enter skills separated by commas (e.g., React, Node.js, Python, Machine Learning)"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Separate multiple skills with commas. Spaces within skill names are allowed.
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      💡 Type skills separated by commas. You can type commas freely - they will be processed when you finish typing.
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      ✅ Example: "React, Node.js, Python, Machine Learning"
+                    </p>
+                    {skillsInput && (
+                      <p className="text-xs text-green-600">
+                        📝 You can see your input: "{skillsInput}"
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <>
