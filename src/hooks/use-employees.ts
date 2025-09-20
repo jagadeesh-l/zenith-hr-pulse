@@ -42,9 +42,21 @@ export function useEmployees() {
   const { toast } = useToast();
   const hasInitialized = useRef(false);
 
+  // Debug logging
+  console.log('useEmployees hook called:', {
+    globalEmployees: globalEmployees.length,
+    globalLoading,
+    globalError,
+    hasInitialized: hasInitialized.current
+  });
 
   // Fetch all employees
   const fetchEmployees = async () => {
+    console.log('fetchEmployees called:', {
+      globalLoading,
+      globalEmployeesLength: globalEmployees.length,
+      hasPromise: !!globalFetchPromise
+    });
 
     // Check cache first
     const cachedData = apiCache.get(CACHE_KEYS.EMPLOYEES);
@@ -288,6 +300,9 @@ export function useEmployees() {
       console.log('Updating global state with', transformedData.length, 'employees');
       globalEmployees = transformedData;
       globalError = null;
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('employeesUpdated'));
       
     } catch (err) {
       console.error("Error fetching employees:", err);
@@ -601,29 +616,46 @@ export function useEmployees() {
       
       const data = await response.json();
       
-      // Update local state
+      // Update local state with complete employee data
       const updatedEmployee = {
         id: data.id,
+        employeeId: data.employee_id || "",
         name: data.name,
         position: data.position,
         department: data.department,
-        photoUrl: data.photo_url,
-        email: data.email,
-        phone: data.phone,
-        bio: data.bio,
-        startDate: data.start_date,
-        manager: data.manager_name,
-        reporting_to: data.reporting_to,
-        skills: data.skills,
-        expertise: data.expertise,
-        experienceYears: data.experience_years
+        photoUrl: data.photo_url || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        mobile: data.mobile || "",
+        bio: data.bio || "",
+        startDate: data.start_date || "",
+        manager: data.reporting_to || "",
+        reporting_to: data.reporting_to || "",
+        skills: data.skills || [],
+        expertise: data.expertise || "",
+        experienceYears: data.experience_years !== null ? data.experience_years : undefined,
+        location: data.location || "",
+        dateOfBirth: data.date_of_birth || "",
+        dateOfJoining: data.date_of_joining || "",
+        gender: data.gender || ""
       };
       
       // Update global state
+      console.log("🔄 Updating global employees state for employee:", id);
+      console.log("📊 Updated employee data:", updatedEmployee);
+      
       globalEmployees = globalEmployees.map(emp => 
         emp.id === id ? updatedEmployee : emp
       );
       setEmployees(globalEmployees);
+      
+      console.log("✅ Global state updated, total employees:", globalEmployees.length);
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('employeesUpdated'));
+      
+      // Clear cache to ensure fresh data on next fetch
+      apiCache.clear();
       
       toast({
         title: 'Success',
@@ -745,6 +777,30 @@ export function useEmployees() {
       setError(globalError);
     }
   }, []);
+
+  // Sync local state with global state when global state changes
+  // Use a custom event system to notify components of global state changes
+  useEffect(() => {
+    const handleGlobalStateChange = () => {
+      console.log('🔄 Global state changed, syncing local state:', {
+        globalEmployeesLength: globalEmployees.length,
+        localEmployeesLength: employees.length,
+        globalLoading,
+        globalError
+      });
+      
+      setEmployees([...globalEmployees]); // Create new array to trigger re-render
+      setIsLoading(globalLoading);
+      setError(globalError);
+    };
+
+    // Listen for global state changes
+    window.addEventListener('employeesUpdated', handleGlobalStateChange);
+    
+    return () => {
+      window.removeEventListener('employeesUpdated', handleGlobalStateChange);
+    };
+  }, [employees.length, globalLoading, globalError]);
 
   return {
     employees,

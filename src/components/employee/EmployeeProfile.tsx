@@ -55,6 +55,18 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
   const isAdmin = true; // For demo purposes, assume admin
   const { updateEmployee, employees, fetchEmployees } = useEmployees();
   
+  // Debug logging - COMPREHENSIVE
+  console.log('🔍 EmployeeProfile DEBUGGING:');
+  console.log('📥 Received employee prop:', {
+    id: employee.id,
+    employeeId: employee.employeeId,
+    name: employee.name,
+    dateOfBirth: employee.dateOfBirth,
+    dateOfJoining: employee.dateOfJoining,
+    experienceYears: employee.experienceYears,
+    email: employee.email,
+    phone: employee.phone
+  });
   
   console.log('📊 ProfileData state:', {
     id: profileData.id,
@@ -171,15 +183,21 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
       });
       
       if (updatedEmployee) {
-        // Update local state with the complete updated employee data
-        setProfileData(prev => ({
-          ...prev,
-          ...updatedEmployee,
-          photoUrl: photoUrl
-        }));
+        console.log("✅ Employee update successful:", updatedEmployee);
         
-        // Clear cache and refresh data
-        apiCache.clear();
+        // Update local state with the complete updated employee data
+        setProfileData(prev => {
+          const newData = {
+            ...prev,
+            ...updatedEmployee,
+            photoUrl: photoUrl
+          };
+          console.log("🔄 Updating profileData from:", prev, "to:", newData);
+          return newData;
+        });
+        
+        // Force refresh the global employees list to ensure Directory gets updated
+        console.log("🔄 Refreshing global employees list...");
         await fetchEmployees();
         
         setIsEditing(false);
@@ -187,6 +205,8 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
           title: "Success",
           description: "Profile updated successfully",
         });
+      } else {
+        console.warn("⚠️ Employee update returned null/undefined");
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -239,10 +259,15 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                       <X className="h-4 w-4" />
                       Cancel
                     </Button>
-                    <Button size="sm" className="gap-2" onClick={handleSubmit} disabled={isUpdating}>
+                    <Button 
+                      size="sm" 
+                      className="gap-2" 
+                      onClick={handleSubmit}
+                      disabled={isUpdating}
+                    >
                       {isUpdating ? (
                         <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
                           Updating...
                         </>
                       ) : (
@@ -259,16 +284,18 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
           </DialogTitle>
         </DialogHeader>
 
-        {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto relative">
-          {isUpdating && (
-            <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 flex items-center justify-center">
-              <div className="flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-lg border">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <span className="text-sm font-medium">Updating profile...</span>
-              </div>
+        {/* Loading Overlay */}
+        {isUpdating && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
+              <p className="text-sm text-muted-foreground">Updating profile...</p>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto">
           <div className="space-y-6 p-1">
 
           {/* Profile Picture Section */}
