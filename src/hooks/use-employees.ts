@@ -27,6 +27,7 @@ export interface Employee {
   expertise?: string;
   experienceYears?: number;
   location?: string;
+  account?: string;
   dateOfBirth?: string;
   dateOfJoining?: string;
   gender?: string;
@@ -276,11 +277,12 @@ export function useEmployees() {
             bio: emp.bio || "",
             startDate: emp.start_date || "",
             manager: emp.reporting_to || "", // Map manager to reporting_to field
-            reporting_to: emp.reporting_to || "",
+            reporting_to: emp.reporting_to || null,
             skills: emp.skills || [],
             expertise: emp.expertise || "",
             experienceYears: emp.experience_years !== null ? emp.experience_years : undefined,
             location: emp.location || "",
+            account: emp.account || "",
             dateOfBirth: emp.date_of_birth || "",
             dateOfJoining: emp.date_of_joining || "",
             gender: emp.gender || ""

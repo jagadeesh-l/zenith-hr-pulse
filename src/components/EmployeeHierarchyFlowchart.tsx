@@ -48,19 +48,86 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
   // Build hierarchy structure
   const buildHierarchy = useCallback(() => {
     try {
+      console.log('🔍 Building hierarchy with employees:', employees.length);
+      
+      // Handle empty employees array
+      if (!employees || employees.length === 0) {
+        console.log('⚠️ No employees found, setting empty hierarchy');
+        setHierarchy([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Debug: Check all employees and their reporting relationships
+      console.log('📊 All employees data:', employees.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        reporting_to: emp.reporting_to,
+        hasReportingTo: !!emp.reporting_to,
+        reportingToExists: emp.reporting_to ? employees.find(e => e.id === emp.reporting_to) : null
+      })));
+      
+      // Debug: Check for the specific missing employee
+      const missingEmployee = employees.find(emp => emp.id === 'bf716eb3-b688-4e79-8467-d41cc5db0791');
+      if (missingEmployee) {
+        console.log('🔍 Missing employee found:', {
+          id: missingEmployee.id,
+          name: missingEmployee.name,
+          reporting_to: missingEmployee.reporting_to,
+          reportingToExists: missingEmployee.reporting_to ? employees.find(e => e.id === missingEmployee.reporting_to) : null
+        });
+      } else {
+        console.log('❌ Missing employee NOT found in employees array');
+      }
+      
       // Find root employees (those who don't report to anyone or report to someone not in the list)
       const rootEmployees = employees.filter(emp => 
-        !emp.reporting_to || !employees.find(e => e.id === emp.reporting_to)
+        !emp.reporting_to || emp.reporting_to === null || emp.reporting_to.trim() === '' || !employees.find(e => e.id === emp.reporting_to)
       );
+      
+      // Debug: Check for orphaned employees (employees who report to someone not in the list)
+      const orphanedEmployees = employees.filter(emp => 
+        emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && !employees.find(e => e.id === emp.reporting_to)
+      );
+      console.log('🚨 Orphaned employees (report to non-existent manager):', orphanedEmployees.length);
+      console.log('📋 Orphaned employees:', orphanedEmployees.map(emp => ({ 
+        id: emp.id, 
+        name: emp.name, 
+        reportsTo: emp.reporting_to
+      })));
+      
+      console.log('🌳 Root employees found:', rootEmployees.length);
+      console.log('📋 Root employees:', rootEmployees.map(emp => ({ id: emp.id, name: emp.name })));
+      
+      // Debug: Check which employees are NOT root employees (i.e., they report to someone)
+      const nonRootEmployees = employees.filter(emp => 
+        emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && employees.find(e => e.id === emp.reporting_to)
+      );
+      console.log('👥 Non-root employees (report to someone):', nonRootEmployees.length);
+      console.log('📋 Non-root employees:', nonRootEmployees.map(emp => ({ 
+        id: emp.id, 
+        name: emp.name, 
+        reportsTo: emp.reporting_to,
+        reportsToName: employees.find(e => e.id === emp.reporting_to)?.name
+      })));
 
       // Calculate total descendants count (including children of children) for each employee
-      const calculateTotalDescendants = (employeeId: string): number => {
-        const directReports = employees.filter(emp => emp.reporting_to === employeeId);
+      const calculateTotalDescendants = (employeeId: string, visited: Set<string> = new Set()): number => {
+        // Prevent circular references
+        if (visited.has(employeeId)) {
+          console.warn(`⚠️ Circular reference detected for employee ${employeeId}`);
+          return 0;
+        }
+        
+        visited.add(employeeId);
+        
+        const directReports = employees.filter(emp => emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && emp.reporting_to === employeeId);
         let totalCount = directReports.length;
         
         // Recursively count children of children
         directReports.forEach(child => {
-          totalCount += calculateTotalDescendants(child.id);
+          totalCount += calculateTotalDescendants(child.id, new Set(visited));
         });
         
         return totalCount;
@@ -82,11 +149,155 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
         level
       });
 
+      // Create root nodes and sort by hierarchy level (position-based)
       const rootNodes = rootEmployees.map(emp => createNode(emp, 0));
+      
+      // Sort root employees by hierarchy level (CEO/CTO at top, then VPs, then Directors, etc.)
+      const getHierarchyLevel = (position: string): number => {
+        const pos = position.toLowerCase();
+        
+        // Executive level (highest)
+        if (pos.includes('ceo') || pos.includes('cto') || pos.includes('cfo') || pos.includes('cso')) {
+          return 1;
+        }
+        // VP level
+        if (pos.includes('vp') || pos.includes('vice president')) {
+          return 2;
+        }
+        // Director level
+        if (pos.includes('director')) {
+          return 3;
+        }
+        // Manager level
+        if (pos.includes('manager') || pos.includes('lead')) {
+          return 4;
+        }
+        // Senior level
+        if (pos.includes('senior')) {
+          return 5;
+        }
+        // Regular level (lowest)
+        return 6;
+      };
+      
+      // Sort root nodes by hierarchy level, then by name
+      rootNodes.sort((a, b) => {
+        const levelA = getHierarchyLevel(a.employee.position);
+        const levelB = getHierarchyLevel(b.employee.position);
+        
+        if (levelA !== levelB) {
+          return levelA - levelB; // Lower level number = higher in hierarchy
+        }
+        
+        // If same level, sort by name
+        return a.employee.name.localeCompare(b.employee.name);
+      });
+      
+      console.log('📊 Root employees sorted by hierarchy level:', rootNodes.map(node => ({
+        name: node.employee.name,
+        position: node.employee.position,
+        level: getHierarchyLevel(node.employee.position)
+      })));
+      
+      // Debug: Verify all employees are accounted for
+      const allAccountedEmployees = new Set<string>();
+      rootNodes.forEach(node => {
+        allAccountedEmployees.add(node.employee.id);
+        // Add all descendants
+        const addDescendants = (node: HierarchyNode) => {
+          node.children.forEach(child => {
+            allAccountedEmployees.add(child.employee.id);
+            addDescendants(child);
+          });
+        };
+        addDescendants(node);
+      });
+      
+      const missingFromHierarchy = employees.filter(emp => !allAccountedEmployees.has(emp.id));
+      console.log('🔍 Employees missing from hierarchy:', missingFromHierarchy.length);
+      console.log('📋 Missing employees:', missingFromHierarchy.map(emp => ({ 
+        id: emp.id, 
+        name: emp.name, 
+        reporting_to: emp.reporting_to
+      })));
+      
+      // If there are missing employees, add them as root employees ONLY if they are truly orphaned
+      if (missingFromHierarchy.length > 0) {
+        console.log('🔧 Checking missing employees for proper categorization');
+        
+        // Only add truly orphaned employees as root employees
+        const trulyOrphanedEmployees = missingFromHierarchy.filter(emp => 
+          !emp.reporting_to || emp.reporting_to === null || emp.reporting_to.trim() === '' || !employees.find(e => e.id === emp.reporting_to)
+        );
+        
+        console.log('🚨 Truly orphaned employees to add as root:', trulyOrphanedEmployees.length);
+        console.log('📋 Truly orphaned employees:', trulyOrphanedEmployees.map(emp => ({ 
+          id: emp.id, 
+          name: emp.name, 
+          reporting_to: emp.reporting_to
+        })));
+        
+        if (trulyOrphanedEmployees.length > 0) {
+          const missingNodes = trulyOrphanedEmployees.map(emp => createNode(emp, 0));
+          rootNodes.push(...missingNodes);
+        }
+        
+        // Check for employees that should be under managers but aren't showing up
+        const employeesWithValidManagers = missingFromHierarchy.filter(emp => 
+          emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && employees.find(e => e.id === emp.reporting_to)
+        );
+        
+        if (employeesWithValidManagers.length > 0) {
+          console.log('⚠️ Employees with valid managers but missing from hierarchy:', employeesWithValidManagers.length);
+          console.log('📋 These employees should appear under their managers:', employeesWithValidManagers.map(emp => ({ 
+            id: emp.id, 
+            name: emp.name, 
+            reportsTo: emp.reporting_to,
+            reportsToName: employees.find(e => e.id === emp.reporting_to)?.name
+          })));
+        }
+      }
+      
       setHierarchy(rootNodes);
       setError(null);
+      
+      // Final verification: Check for duplicates
+      const finalEmployeeIds = new Set<string>();
+      const duplicates: string[] = [];
+      
+      const checkForDuplicates = (nodes: HierarchyNode[]) => {
+        nodes.forEach(node => {
+          if (finalEmployeeIds.has(node.employee.id)) {
+            duplicates.push(node.employee.id);
+            console.warn(`⚠️ Duplicate employee found: ${node.employee.id} (${node.employee.name})`);
+          } else {
+            finalEmployeeIds.add(node.employee.id);
+          }
+          checkForDuplicates(node.children);
+        });
+      };
+      
+      checkForDuplicates(rootNodes);
+      
+      if (duplicates.length > 0) {
+        console.error('❌ Duplicates found in hierarchy:', duplicates);
+      } else {
+        console.log('✅ No duplicates found in hierarchy');
+      }
+      
+      // Final summary
+      console.log('✅ Hierarchy built successfully:');
+      console.log(`📊 Total employees: ${employees.length}`);
+      console.log(`🌳 Root employees: ${rootEmployees.length}`);
+      console.log(`👥 Non-root employees: ${nonRootEmployees.length}`);
+      console.log(`🚨 Orphaned employees: ${orphanedEmployees.length}`);
+      console.log(`🔍 Missing from hierarchy: ${missingFromHierarchy.length}`);
+      console.log(`📋 Final hierarchy nodes: ${rootNodes.length}`);
+      console.log(`🔄 Unique employees in hierarchy: ${finalEmployeeIds.size}`);
+      console.log(`⚠️ Duplicates: ${duplicates.length}`);
     } catch (err) {
-      setError('Failed to build hierarchy structure');
+      console.error('❌ Error building hierarchy:', err);
+      setError(`Failed to build hierarchy structure: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -100,16 +311,27 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
       );
 
       // Find direct reports
-      const directReports = employees.filter(emp => emp.reporting_to === nodeId);
+      const directReports = employees.filter(emp => emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && emp.reporting_to === nodeId);
+      
+      console.log(`🔍 Loading children for ${nodeId}:`, directReports.length, 'direct reports found');
+      console.log('📋 Direct reports:', directReports.map(emp => ({ id: emp.id, name: emp.name })));
       
       // Calculate total descendants count (including children of children) for each employee
-      const calculateTotalDescendants = (employeeId: string): number => {
-        const directReports = employees.filter(emp => emp.reporting_to === employeeId);
+      const calculateTotalDescendants = (employeeId: string, visited: Set<string> = new Set()): number => {
+        // Prevent circular references
+        if (visited.has(employeeId)) {
+          console.warn(`⚠️ Circular reference detected for employee ${employeeId}`);
+          return 0;
+        }
+        
+        visited.add(employeeId);
+        
+        const directReports = employees.filter(emp => emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && emp.reporting_to === employeeId);
         let totalCount = directReports.length;
         
         // Recursively count children of children
         directReports.forEach(child => {
-          totalCount += calculateTotalDescendants(child.id);
+          totalCount += calculateTotalDescendants(child.id, new Set(visited));
         });
         
         return totalCount;
@@ -131,6 +353,52 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
         level: (employees.find(e => e.id === nodeId)?.reporting_to ? 
           employees.find(e => e.id === nodeId)!.reporting_to!.split('.').length : 0) + 1
       }));
+      
+      // Sort child nodes by hierarchy level, then by name
+      const getHierarchyLevel = (position: string): number => {
+        const pos = position.toLowerCase();
+        
+        // Executive level (highest)
+        if (pos.includes('ceo') || pos.includes('cto') || pos.includes('cfo') || pos.includes('cso')) {
+          return 1;
+        }
+        // VP level
+        if (pos.includes('vp') || pos.includes('vice president')) {
+          return 2;
+        }
+        // Director level
+        if (pos.includes('director')) {
+          return 3;
+        }
+        // Manager level
+        if (pos.includes('manager') || pos.includes('lead')) {
+          return 4;
+        }
+        // Senior level
+        if (pos.includes('senior')) {
+          return 5;
+        }
+        // Regular level (lowest)
+        return 6;
+      };
+      
+      childNodes.sort((a, b) => {
+        const levelA = getHierarchyLevel(a.employee.position);
+        const levelB = getHierarchyLevel(b.employee.position);
+        
+        if (levelA !== levelB) {
+          return levelA - levelB; // Lower level number = higher in hierarchy
+        }
+        
+        // If same level, sort by name
+        return a.employee.name.localeCompare(b.employee.name);
+      });
+      
+      console.log(`📊 Children for ${nodeId} sorted by hierarchy level:`, childNodes.map(node => ({
+        name: node.employee.name,
+        position: node.employee.position,
+        level: getHierarchyLevel(node.employee.position)
+      })));
 
       // Cache the children
       setLoadedChildren(prev => new Map(prev).set(nodeId, childNodes));

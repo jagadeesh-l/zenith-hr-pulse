@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
@@ -66,11 +66,12 @@ interface InteractiveOrgChartProps {
 
 interface EmployeeDetailModalProps {
   employee: Employee | null;
+  employees: Employee[];
   isOpen: boolean;
   onClose: () => void;
 }
 
-function EmployeeDetailModal({ employee, isOpen, onClose }: EmployeeDetailModalProps) {
+function EmployeeDetailModal({ employee, employees, isOpen, onClose }: EmployeeDetailModalProps) {
   if (!employee) return null;
 
   const formatDate = (dateString?: string) => {
@@ -177,39 +178,83 @@ function EmployeeDetailModal({ employee, isOpen, onClose }: EmployeeDetailModalP
             </CardContent>
           </Card>
 
-          {/* Employment Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Employment Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Date of Joining:</span>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(employee.date_of_joining)}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Date of Birth:</span>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(employee.date_of_birth)}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Account:</span>
-                  <p className="text-sm text-muted-foreground">{employee.account || 'Not specified'}</p>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Gender:</span>
-                  <p className="text-sm text-muted-foreground">{employee.gender || 'Not specified'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Reporting Relationships */}
+          {(() => {
+            // Find direct reports (children)
+            const directReports = employees.filter(emp => 
+              emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && emp.reporting_to === employee.id
+            );
+            
+            // Find reporting manager
+            const reportingManager = employee.reporting_to && employee.reporting_to !== null && employee.reporting_to.trim() !== '' 
+              ? employees.find(emp => emp.id === employee.reporting_to)
+              : null;
+            
+            // Only show this section if there are relationships
+            if (directReports.length === 0 && !reportingManager) {
+              return null;
+            }
+            
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Reporting Relationships
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Reporting Manager */}
+                  {reportingManager && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ChevronDown className="h-4 w-4 text-muted-foreground rotate-180" />
+                        <span className="text-sm font-medium">Reports to:</span>
+                      </div>
+                      <div className="ml-6 flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={reportingManager.photoUrl} alt={reportingManager.name} />
+                          <AvatarFallback className="text-xs">
+                            {reportingManager.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{reportingManager.name}</p>
+                          <p className="text-xs text-muted-foreground">{reportingManager.position}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Direct Reports */}
+                  {directReports.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Direct Reports ({directReports.length}):</span>
+                      </div>
+                      <div className="ml-6 space-y-2">
+                        {directReports.map(report => (
+                          <div key={report.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={report.photoUrl} alt={report.name} />
+                              <AvatarFallback className="text-xs">
+                                {report.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">{report.name}</p>
+                              <p className="text-xs text-muted-foreground">{report.position}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Bio */}
           {employee.bio && (
@@ -242,20 +287,62 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
       
       // Find root employees (those who don't report to anyone or report to someone not in the list)
       const rootEmployees = employees.filter(emp => 
-        !emp.reporting_to || !employees.find(e => e.id === emp.reporting_to)
+        !emp.reporting_to || emp.reporting_to === null || emp.reporting_to.trim() === '' || !employees.find(e => e.id === emp.reporting_to)
       );
 
       // Calculate direct reports count for each employee
       const directReportsCount = new Map<string, number>();
       employees.forEach(emp => {
-        if (emp.reporting_to) {
+        if (emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '') {
           directReportsCount.set(emp.reporting_to, (directReportsCount.get(emp.reporting_to) || 0) + 1);
         }
       });
 
       // Recursively build tree
       const buildNodeWithChildren = (employee: Employee, level: number = 0): TreeNode => {
-        const directReports = employees.filter(emp => emp.reporting_to === employee.id);
+        const directReports = employees.filter(emp => emp.reporting_to && emp.reporting_to !== null && emp.reporting_to.trim() !== '' && emp.reporting_to === employee.id);
+        
+        // Sort children by hierarchy level, then by name
+        const getHierarchyLevel = (position: string): number => {
+          const pos = position.toLowerCase();
+          
+          // Executive level (highest)
+          if (pos.includes('ceo') || pos.includes('cto') || pos.includes('cfo') || pos.includes('cso')) {
+            return 1;
+          }
+          // VP level
+          if (pos.includes('vp') || pos.includes('vice president')) {
+            return 2;
+          }
+          // Director level
+          if (pos.includes('director')) {
+            return 3;
+          }
+          // Manager level
+          if (pos.includes('manager') || pos.includes('lead')) {
+            return 4;
+          }
+          // Senior level
+          if (pos.includes('senior')) {
+            return 5;
+          }
+          // Regular level (lowest)
+          return 6;
+        };
+        
+        // Sort direct reports by hierarchy level, then by name
+        directReports.sort((a, b) => {
+          const levelA = getHierarchyLevel(a.position);
+          const levelB = getHierarchyLevel(b.position);
+          
+          if (levelA !== levelB) {
+            return levelA - levelB; // Lower level number = higher in hierarchy
+          }
+          
+          // If same level, sort by name
+          return a.name.localeCompare(b.name);
+        });
+        
         const children = directReports.map(child => buildNodeWithChildren(child, level + 1));
         
         return {
@@ -267,7 +354,56 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
         };
       };
 
+      // Create root nodes and sort by hierarchy level (same logic as Org's List)
       const rootNodes = rootEmployees.map(emp => buildNodeWithChildren(emp, 0));
+      
+      // Sort root employees by hierarchy level (CEO/CTO at top, then VPs, then Directors, etc.)
+      const getHierarchyLevel = (position: string): number => {
+        const pos = position.toLowerCase();
+        
+        // Executive level (highest)
+        if (pos.includes('ceo') || pos.includes('cto') || pos.includes('cfo') || pos.includes('cso')) {
+          return 1;
+        }
+        // VP level
+        if (pos.includes('vp') || pos.includes('vice president')) {
+          return 2;
+        }
+        // Director level
+        if (pos.includes('director')) {
+          return 3;
+        }
+        // Manager level
+        if (pos.includes('manager') || pos.includes('lead')) {
+          return 4;
+        }
+        // Senior level
+        if (pos.includes('senior')) {
+          return 5;
+        }
+        // Regular level (lowest)
+        return 6;
+      };
+      
+      // Sort root nodes by hierarchy level, then by name
+      rootNodes.sort((a, b) => {
+        const levelA = getHierarchyLevel(a.employee.position);
+        const levelB = getHierarchyLevel(b.employee.position);
+        
+        if (levelA !== levelB) {
+          return levelA - levelB; // Lower level number = higher in hierarchy
+        }
+        
+        // If same level, sort by name
+        return a.employee.name.localeCompare(b.employee.name);
+      });
+      
+      console.log('📊 Org Tree - Root employees sorted by hierarchy level:', rootNodes.map(node => ({
+        name: node.employee.name,
+        position: node.employee.position,
+        level: getHierarchyLevel(node.employee.position)
+      })));
+      
       setTree(rootNodes);
       setError(null);
     } catch (err) {
@@ -328,12 +464,15 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
 
     return (
       <div key={node.employee.id} className="flex flex-col items-center">
-        {/* Employee Card */}
-        <Card 
+        {/* Sleek Employee Card */}
+        <div 
           className={cn(
-            "w-64 transition-all duration-200 hover:shadow-lg cursor-pointer group",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            depth === 0 ? "border-primary/20 shadow-md" : "border-border"
+            "relative bg-gradient-to-br from-card to-card/80 backdrop-blur-sm",
+            "border border-border/50 rounded-xl p-4 transition-all duration-300",
+            "hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20",
+            "cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary/20",
+            "w-72 min-h-[140px] flex flex-col justify-between",
+            depth === 0 ? "ring-1 ring-primary/10 shadow-lg" : "shadow-md"
           )}
           onClick={() => handleEmployeeClick(node.employee)}
           onKeyDown={(e) => handleKeyDown(e, node.employee.id)}
@@ -342,83 +481,95 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
           aria-expanded={isExpanded}
           aria-label={`${node.employee.name}, ${node.employee.position}, ${node.directReportsCount} direct reports`}
         >
-          <CardContent className="p-4">
-            {/* Expand/Collapse Button */}
-            {hasChildren && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-background border shadow-sm z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleNode(node.employee.id);
-                }}
-                aria-label={isExpanded ? 'Collapse team' : 'Expand team'}
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-            
-            {/* Employee Avatar */}
-            <div className="flex flex-col items-center space-y-3">
-              <Avatar className={cn(
-                "ring-2 ring-background group-hover:ring-primary/20 transition-all",
-                depth === 0 ? "h-16 w-16" : "h-14 w-14"
+          {/* Expand/Collapse Button */}
+          {hasChildren && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full",
+                "bg-background border border-border shadow-lg hover:shadow-xl",
+                "transition-all duration-200 z-10",
+                "hover:bg-primary hover:text-primary-foreground"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleNode(node.employee.id);
+              }}
+              aria-label={isExpanded ? 'Collapse team' : 'Expand team'}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          
+          {/* Employee Info */}
+          <div className="flex items-start gap-3">
+            {/* Avatar */}
+            <Avatar className={cn(
+              "ring-2 ring-background group-hover:ring-primary/30 transition-all duration-200",
+              depth === 0 ? "h-12 w-12" : "h-10 w-10"
+            )}>
+              <AvatarImage src={node.employee.photoUrl} alt={node.employee.name} />
+              <AvatarFallback className={cn(
+                "font-semibold bg-gradient-to-br from-primary/10 to-primary/20",
+                depth === 0 ? "text-sm" : "text-xs"
               )}>
-                <AvatarImage src={node.employee.photoUrl} alt={node.employee.name} />
-                <AvatarFallback className={cn(
-                  "font-semibold",
-                  depth === 0 ? "text-lg" : "text-base"
-                )}>
-                  {node.employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+                {node.employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
 
-              {/* Employee Info */}
-              <div className="text-center space-y-2 w-full">
-                <h3 className={cn(
-                  "font-semibold truncate",
-                  depth === 0 ? "text-lg" : "text-base"
-                )}>
-                  {node.employee.name}
-                </h3>
-                
-                <p className="text-sm text-muted-foreground font-medium truncate">
-                  {node.employee.position}
-                </p>
+            {/* Details */}
+            <div className="flex-1 min-w-0">
+              <h3 className={cn(
+                "font-semibold truncate group-hover:text-primary transition-colors",
+                depth === 0 ? "text-base" : "text-sm"
+              )}>
+                {node.employee.name}
+              </h3>
+              
+              <p className="text-xs text-muted-foreground font-medium truncate mb-2">
+                {node.employee.position}
+              </p>
 
-                {/* Direct Reports Count */}
-                {node.directReportsCount > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Users className="h-3 w-3 mr-1" />
-                    {node.directReportsCount} direct reports
-                  </Badge>
-                )}
+              {/* Department Badge */}
+              <Badge 
+                variant="secondary" 
+                className="text-xs mb-2 bg-gradient-to-r from-secondary/50 to-secondary/30"
+              >
+                {node.employee.department}
+              </Badge>
 
-                {/* Current Project */}
-                <div className="flex items-center justify-center gap-1 mt-2">
-                  <Briefcase className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground truncate">
-                    {currentProject}
-                  </span>
+              {/* Direct Reports Count */}
+              {node.directReportsCount > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  <span>{node.directReportsCount} reports</span>
                 </div>
-              </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Bottom Project Info */}
+          <div className="mt-3 pt-3 border-t border-border/30">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Briefcase className="h-3 w-3" />
+              <span className="truncate">{currentProject}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Vertical Connector Line */}
         {hasChildren && isExpanded && (
-          <div className="w-0.5 h-8 bg-primary/30 my-2"></div>
+          <div className="w-0.5 h-6 bg-gradient-to-b from-primary/40 to-primary/20 my-3"></div>
         )}
 
         {/* Children */}
         {isExpanded && node.children.length > 0 && (
-          <div className="flex gap-6 items-start mt-4">
+          <div className="flex gap-4 items-start mt-4 flex-wrap justify-center">
             {node.children.map(child => renderTreeNode(child, depth + 1))}
           </div>
         )}
@@ -488,10 +639,10 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
       </div>
 
       {/* Organization Chart Container */}
-      <div className="border border-border rounded-lg bg-card overflow-hidden">
+      <div className="border border-border/50 rounded-xl bg-gradient-to-br from-card/50 to-card/30 backdrop-blur-sm overflow-hidden shadow-lg">
         <div className="h-[700px] overflow-auto">
-          <div className="p-8">
-            <div className="flex flex-col items-center min-w-max">
+          <div className="p-6">
+            <div className="flex flex-col items-center min-w-max space-y-6">
               {tree.map(node => renderTreeNode(node))}
             </div>
           </div>
@@ -501,6 +652,7 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
       {/* Employee Detail Modal */}
       <EmployeeDetailModal
         employee={selectedEmployee}
+        employees={employees}
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);

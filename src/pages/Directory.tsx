@@ -61,8 +61,10 @@ export default function Directory() {
     importEmployeesFromCsv 
   } = useEmployees();
   
-  // Available departments for filters and forms
-  const departments = ["Engineering", "Product", "Operations", "HR", "Finance", "Marketing", "Sales"];
+  // Available departments, locations, and accounts for filters - dynamically generated from employee data
+  const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))].sort();
+  const locations = [...new Set(employees.map(emp => emp.location).filter(Boolean))].sort();
+  const accounts = [...new Set(employees.map(emp => emp.account).filter(Boolean))].sort();
   
   const toggleFilter = (filter: string) => {
     setActiveFilters(prev => 
@@ -79,6 +81,18 @@ export default function Directory() {
     // Department filters
     if (activeFilters.some(filter => filter.startsWith("Department:")) && 
         !activeFilters.includes(`Department: ${employee.department}`)) {
+      return false;
+    }
+    
+    // Location filters
+    if (activeFilters.some(filter => filter.startsWith("Location:")) && 
+        !activeFilters.includes(`Location: ${employee.location}`)) {
+      return false;
+    }
+    
+    // Account filters
+    if (activeFilters.some(filter => filter.startsWith("Account:")) && 
+        !activeFilters.includes(`Account: ${employee.account}`)) {
       return false;
     }
     
@@ -135,12 +149,57 @@ export default function Directory() {
                       Filters
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => toggleFilter("Department: Engineering")}>Department: Engineering</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleFilter("Department: Product")}>Department: Product</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleFilter("Department: HR")}>Department: HR</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleFilter("Status: Active")}>Status: Active</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleFilter("Status: On Leave")}>Status: On Leave</DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {/* Department Section */}
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                      Department
+                    </div>
+                    {departments.map(dept => (
+                      <DropdownMenuItem 
+                        key={dept} 
+                        onClick={() => toggleFilter(`Department: ${dept}`)}
+                        className="pl-4"
+                      >
+                        {dept}
+                      </DropdownMenuItem>
+                    ))}
+                    
+                    {/* Location Section */}
+                    {locations.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1">
+                          Location
+                        </div>
+                        {locations.map(location => (
+                          <DropdownMenuItem 
+                            key={location} 
+                            onClick={() => toggleFilter(`Location: ${location}`)}
+                            className="pl-4"
+                          >
+                            {location}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
+                    
+                    {/* Account Section */}
+                    {accounts.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-1">
+                          Account
+                        </div>
+                        {accounts.map(account => (
+                          <DropdownMenuItem 
+                            key={account} 
+                            onClick={() => toggleFilter(`Account: ${account}`)}
+                            className="pl-4"
+                          >
+                            {account}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
+                    
                   </DropdownMenuContent>
                 </DropdownMenu>
                 
