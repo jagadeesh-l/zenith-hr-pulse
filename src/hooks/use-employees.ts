@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from './use-toast';
+import { apiCache, CACHE_KEYS } from '@/utils/api-cache';
 
 // Global state to prevent multiple simultaneous API calls
 let globalEmployees: Employee[] = [];
@@ -41,21 +42,31 @@ export function useEmployees() {
   const { toast } = useToast();
   const hasInitialized = useRef(false);
 
-  // Debug logging
-  console.log('useEmployees hook called:', {
-    globalEmployees: globalEmployees.length,
-    globalLoading,
-    globalError,
-    hasInitialized: hasInitialized.current
-  });
 
   // Fetch all employees
   const fetchEmployees = async () => {
-    console.log('fetchEmployees called:', {
-      globalLoading,
-      globalEmployeesLength: globalEmployees.length,
-      hasPromise: !!globalFetchPromise
-    });
+
+    // Check cache first
+    const cachedData = apiCache.get(CACHE_KEYS.EMPLOYEES);
+    if (cachedData) {
+      console.log('✅ Using cached employees data:', cachedData.length, 'employees');
+      console.log('🔍 Cached data sample:', cachedData[0] ? {
+        id: cachedData[0].id,
+        employeeId: cachedData[0].employeeId,
+        name: cachedData[0].name,
+        dateOfBirth: cachedData[0].dateOfBirth,
+        dateOfJoining: cachedData[0].dateOfJoining,
+        experienceYears: cachedData[0].experienceYears
+      } : null);
+      globalEmployees = cachedData;
+      globalError = null;
+      setEmployees(cachedData);
+      setIsLoading(false);
+      setError(null);
+      return;
+    } else {
+      console.log('❌ No cached employees data found');
+    }
 
     // If already loading, return the existing promise
     if (globalLoading && globalFetchPromise) {
@@ -86,7 +97,21 @@ export function useEmployees() {
     globalFetchPromise = (async () => {
       try {
         console.log('Making API call to:', `${API_BASE_URL}/employees`);
-        const response = await fetch(`${API_BASE_URL}/employees`);
+        
+        // Get authentication token
+        const token = localStorage.getItem('auth_token');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log("useEmployees - Authorization header set:", `Bearer ${token.substring(0, 20)}...`);
+        } else {
+          console.log("useEmployees - No token available");
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/employees`, { headers });
         
         console.log('API response:', {
           status: response.status,
@@ -216,29 +241,48 @@ export function useEmployees() {
         }
       
         // Transform data to match our frontend model
-        console.log('Transforming data for', data.length, 'employees');
-        const transformedData = data.map((emp: any) => ({
-        id: emp.id || "temp-" + Math.random().toString(36).substr(2, 9),
-        employeeId: emp.employee_id || "",
-        name: emp.name || "Unknown",
-        position: emp.position || "Not specified",
-        department: emp.department || "Not specified",
-        photoUrl: emp.photo_url || "",
-        email: emp.email || "",
-        phone: emp.phone || "",
-        mobile: emp.mobile || "",
-        bio: emp.bio || "",
-        startDate: emp.start_date || "",
-        manager: emp.reporting_to || "", // Map manager to reporting_to field
-        reporting_to: emp.reporting_to || "",
-        skills: emp.skills || [],
-        expertise: emp.expertise || "",
-        experienceYears: emp.experience_years || 0,
-        location: emp.location || "",
-        dateOfBirth: emp.date_of_birth || "",
-        dateOfJoining: emp.date_of_joining || "",
-        gender: emp.gender || ""
-      }));
+        console.log('🔄 Transforming data for', data.length, 'employees');
+        const transformedData = data.map((emp: any) => {
+          console.log('🔍 Employee data transformation:', {
+            id: emp.id,
+            employee_id: emp.employee_id,
+            name: emp.name,
+            date_of_birth: emp.date_of_birth,
+            date_of_joining: emp.date_of_joining,
+            experience_years: emp.experience_years
+          });
+          return {
+            id: emp.id || "temp-" + Math.random().toString(36).substr(2, 9),
+            employeeId: emp.employee_id || "",
+            name: emp.name || "Unknown",
+            position: emp.position || "Not specified",
+            department: emp.department || "Not specified",
+            photoUrl: emp.photo_url || "",
+            email: emp.email || "",
+            phone: emp.phone || "",
+            mobile: emp.mobile || "",
+            bio: emp.bio || "",
+            startDate: emp.start_date || "",
+            manager: emp.reporting_to || "", // Map manager to reporting_to field
+            reporting_to: emp.reporting_to || "",
+            skills: emp.skills || [],
+            expertise: emp.expertise || "",
+            experienceYears: emp.experience_years !== null ? emp.experience_years : undefined,
+            location: emp.location || "",
+            dateOfBirth: emp.date_of_birth || "",
+            dateOfJoining: emp.date_of_joining || "",
+            gender: emp.gender || ""
+          };
+        });
+        
+        console.log('🔍 Transformed data sample:', transformedData[0] ? {
+          id: transformedData[0].id,
+          employeeId: transformedData[0].employeeId,
+          name: transformedData[0].name,
+          dateOfBirth: transformedData[0].dateOfBirth,
+          dateOfJoining: transformedData[0].dateOfJoining,
+          experienceYears: transformedData[0].experienceYears
+        } : null);
       
       // Update global state
       console.log('Updating global state with', transformedData.length, 'employees');

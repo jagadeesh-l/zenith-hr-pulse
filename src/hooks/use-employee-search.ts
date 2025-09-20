@@ -79,7 +79,6 @@ export function useEmployeeSearch() {
       setSearchResults(filtered);
       setShowResults(true);
     } catch (error) {
-      console.error('Error searching employees:', error);
       setSearchResults([]);
       setShowResults(false);
     } finally {

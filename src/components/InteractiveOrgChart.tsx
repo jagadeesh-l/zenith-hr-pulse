@@ -272,7 +272,6 @@ export function InteractiveOrgChart({ employees }: InteractiveOrgChartProps) {
       setError(null);
     } catch (err) {
       setError('Failed to build organization chart');
-      console.error('Error building tree:', err);
     } finally {
       setLoading(false);
     }

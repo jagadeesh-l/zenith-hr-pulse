@@ -112,7 +112,6 @@ export function BeeGame() {
       try {
         setHighScores(JSON.parse(savedScores));
       } catch (e) {
-        console.error("Failed to parse saved scores", e);
         // Use our shared leaderboard if there's an error
         const defaultScores = generateBeeLeaderboard();
         setHighScores(defaultScores);
@@ -129,10 +128,8 @@ export function BeeGame() {
     img.src = '/HoneyBee.png'; // Reference from public directory
     img.onload = () => {
       setBeeImage(img);
-      console.log("Bee image loaded successfully");
     };
     img.onerror = (e) => {
-      console.error("Failed to load bee image:", e);
     };
 
     // Draw the initial scene
@@ -291,7 +288,6 @@ export function BeeGame() {
     
     // Draw bee - either image if loaded or fallback to drawn bee
     if (beeImage && beeImage.complete) {
-      console.log("Drawing bee image"); // Debug
       ctx.save();
       if (gameOver) {
         // Add red tint for game over

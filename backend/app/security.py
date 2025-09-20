@@ -11,7 +11,7 @@ from .config import config
 # Security configuration
 SECRET_KEY = config.get("security.secret_key", "your-secret-key-for-development")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours for development
 
 # Update CryptContext configuration
 pwd_context = CryptContext(

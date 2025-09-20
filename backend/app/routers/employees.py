@@ -3,6 +3,7 @@ from typing import List, Optional
 from ..models.employee import EmployeeCreate, EmployeeUpdate, EmployeeInDB
 from ..database_dynamodb import get_employees_table, parse_dynamodb_item, format_dynamodb_item
 from ..security import get_current_active_user
+from ..services.image_upload import ImageUploadService
 import time
 
 router = APIRouter(
@@ -192,3 +193,72 @@ async def delete_employee(employee_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete employee: {str(e)}")
+
+@router.post("/upload-photo/{employee_id}")
+async def upload_employee_photo(
+    employee_id: str,
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_active_user)
+):
+    """Upload a photo for a specific employee"""
+    try:
+        # Check if employee exists
+        table = await get_employees_table()
+        response = await table.get_item(Key={"id": employee_id})
+        if "Item" not in response:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        # Get employee data to extract location and department for S3 organization
+        employee_data = parse_dynamodb_item(response["Item"])
+        location = employee_data.get("location", "")
+        department = employee_data.get("department", "")
+        
+        # Upload photo using ImageUploadService
+        print(f"DEBUG: Uploading photo for employee {employee_id}")
+        print(f"DEBUG: Employee location: {location}, department: {department}")
+        print(f"DEBUG: File details: {file.filename}, {file.content_type}, {file.size}")
+        
+        photo_url = await ImageUploadService.upload_photo(
+            file=file,
+            employee_id=employee_id,
+            location=location,
+            department=department
+        )
+        
+        print(f"DEBUG: Photo uploaded successfully, URL: {photo_url}")
+        print(f"DEBUG: Photo URL type: {type(photo_url)}")
+        print(f"DEBUG: Photo URL length: {len(photo_url) if photo_url else 'None'}")
+        
+        # Update employee record with new photo URL
+        employee_data["photo_url"] = photo_url
+        employee_data["updated_at"] = time.strftime("%Y-%m-%d")
+        
+        print(f"DEBUG: Updated employee data: {employee_data}")
+        print(f"DEBUG: Photo URL in employee data: {employee_data.get('photo_url')}")
+        
+        # Save updated employee data
+        dynamodb_item = format_dynamodb_item(employee_data)
+        print(f"DEBUG: DynamoDB item to save: {dynamodb_item}")
+        await table.put_item(Item=dynamodb_item)
+        
+        print(f"DEBUG: Employee record updated in DynamoDB")
+        
+        # Verify the data was saved correctly
+        verify_response = await table.get_item(Key={"id": employee_id})
+        if "Item" in verify_response:
+            saved_data = parse_dynamodb_item(verify_response["Item"])
+            print(f"DEBUG: Verified saved data photo_url: {saved_data.get('photo_url')}")
+        else:
+            print("DEBUG: Could not verify saved data")
+        
+        return {
+            "message": "Photo uploaded successfully",
+            "photo_url": photo_url,
+            "employee_id": employee_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error uploading photo: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload photo: {str(e)}")

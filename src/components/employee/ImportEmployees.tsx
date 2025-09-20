@@ -52,7 +52,6 @@ export function ImportEmployees({ isOpen, onClose }: ImportEmployeesProps) {
         onClose();
       }
     } catch (error) {
-      console.error('Import error:', error);
       toast({
         title: "Import failed",
         description: "An error occurred while importing employees.",

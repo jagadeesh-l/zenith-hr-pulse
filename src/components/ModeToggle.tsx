@@ -27,19 +27,15 @@ export function ModeToggle() {
   }, [theme]);
   
   const applyTheme = (newTheme: "light" | "dark") => {
-    console.log("Applying theme:", newTheme);
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
-      console.log("Added dark class to document");
     } else {
       document.documentElement.classList.remove("dark");
-      console.log("Removed dark class from document");
     }
   };
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
-    console.log("Toggling theme from", theme, "to", newTheme);
     setTheme(newTheme);
   };
 

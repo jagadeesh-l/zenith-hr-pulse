@@ -58,7 +58,6 @@ export function GameSection() {
       try {
         setBeeLeaderboard(JSON.parse(savedScores));
       } catch (e) {
-        console.error("Failed to parse saved scores", e);
       }
     } else {
       localStorage.setItem('beeGameScores', JSON.stringify(beeLeaderboard));
@@ -70,7 +69,6 @@ export function GameSection() {
           const newScores = JSON.parse(e.newValue || '[]');
           setBeeLeaderboard(newScores);
         } catch (e) {
-          console.error("Failed to parse updated scores", e);
         }
       }
     };

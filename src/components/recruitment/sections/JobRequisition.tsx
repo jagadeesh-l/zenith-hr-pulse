@@ -117,7 +117,6 @@ export function JobRequisition() {
       setOpenPositions(stats.open_positions);
       setClosedPositions(stats.closed_positions);
     } catch (error) {
-      console.error("Failed to load recruitment data:", error);
       setError("Failed to load recruitment data");
     } finally {
       setLoading(false);
@@ -172,7 +171,6 @@ export function JobRequisition() {
       }
 
     } catch (error) {
-      console.error("Failed to update workflow step:", error);
       setError("Failed to update workflow step");
     } finally {
       setLoading(false);
@@ -261,7 +259,6 @@ export function JobRequisition() {
       // Refresh stats
       await loadRecruitmentData();
     } catch (error) {
-      console.error("Failed to create job requisition:", error);
       setError("Failed to create job requisition");
     } finally {
       setLoading(false);
@@ -352,14 +349,12 @@ export function JobRequisition() {
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
-                  onClick={() => console.log("Edit")}
                 >
                   Edit
                 </Button>
                 <Button 
                   variant="outline" 
                   className="text-red-500 hover:bg-red-50"
-                  onClick={() => console.log("Cancel Request")}
                 >
                   Cancel Request
                 </Button>

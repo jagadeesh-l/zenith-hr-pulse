@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiCache, CACHE_KEYS } from '@/utils/api-cache';
 
 // Feature flag status types
 export type FeatureFlagStatus = 'enabled' | 'disabled' | 'hidden';
@@ -33,6 +34,21 @@ export function useFeatureFlags() {
     setIsLoading(true);
     setError(null);
     
+    // Check cache first
+    const cachedData = apiCache.get(CACHE_KEYS.FEATURE_FLAGS);
+    if (cachedData) {
+      setFeatureFlags(cachedData);
+      
+      // Create status map for quick lookups
+      const statusMap: Record<string, FeatureFlagStatus> = {};
+      cachedData.forEach((flag: FeatureFlag) => {
+        statusMap[flag.name] = flag.status;
+      });
+      setFeatureFlagStatus(statusMap);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_BASE_URL}/feature-flags/`);
       
@@ -43,6 +59,9 @@ export function useFeatureFlags() {
       const data = await response.json();
       setFeatureFlags(data);
       
+      // Cache the data
+      apiCache.set(CACHE_KEYS.FEATURE_FLAGS, data, 10 * 60 * 1000); // Cache for 10 minutes
+      
       // Create status map for quick lookups
       const statusMap: Record<string, FeatureFlagStatus> = {};
       data.forEach((flag: FeatureFlag) => {
@@ -51,12 +70,10 @@ export function useFeatureFlags() {
       setFeatureFlagStatus(statusMap);
       
     } catch (err) {
-      console.error("Error fetching feature flags:", err);
       setError(err instanceof Error ? err.message : 'Failed to fetch feature flags');
       
       // Use default enabled status for development
       if (process.env.NODE_ENV === 'development') {
-        console.log("Using default feature flags for development");
         const defaultFlags: FeatureFlag[] = [
           {
             id: 'default-directory',
@@ -268,7 +285,6 @@ export function useFeatureFlags() {
       await fetchFeatureFlags();
       return true;
     } catch (err) {
-      console.error('Error updating feature flag:', err);
       return false;
     }
   };

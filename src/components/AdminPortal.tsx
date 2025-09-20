@@ -40,25 +40,21 @@ export function AdminPortal({ disabled = false }: AdminPortalProps) {
       icon: <Users className="w-4 h-4" />,
       label: "User Management",
       description: "Manage user accounts and permissions",
-      action: () => console.log("Navigate to user management")
     },
     {
       icon: <BarChart3 className="w-4 h-4" />,
       label: "System Analytics",
       description: "View system performance metrics",
-      action: () => console.log("Navigate to analytics")
     },
     {
       icon: <Database className="w-4 h-4" />,
       label: "Data Management",
       description: "Database backup and maintenance",
-      action: () => console.log("Navigate to data management")
     },
     {
       icon: <Shield className="w-4 h-4" />,
       label: "Security Settings",
       description: "Configure security policies",
-      action: () => console.log("Navigate to security")
     }
   ];
 

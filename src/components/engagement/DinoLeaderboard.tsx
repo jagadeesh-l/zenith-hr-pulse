@@ -22,7 +22,6 @@ export function BeeLeaderboard() {
           const scores = JSON.parse(savedScores);
           setLeaderboard(scores);
         } catch (e) {
-          console.error("Failed to parse saved scores", e);
           setLeaderboard(generateBeeLeaderboard()); // Use our default leaderboard
         }
       } else {

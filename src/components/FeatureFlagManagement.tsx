@@ -45,7 +45,6 @@ export function FeatureFlagManagement() {
         throw new Error('Failed to update feature flag');
       }
     } catch (error) {
-      console.error('Error updating feature flag:', error);
       // You could add a toast notification here
     } finally {
       setUpdatingFlags(prev => {

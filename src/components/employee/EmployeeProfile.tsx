@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Edit2, X, Upload, User, Building, MapPin, Mail, Phone, Calendar, Award, Save } from "lucide-react";
 import { useEmployees } from '@/hooks/use-employees';
+import { authenticatedFetch } from "@/utils/auth-utils";
+import { apiCache, CACHE_KEYS } from "@/utils/api-cache";
 
 interface EmployeeProfileProps {
   isOpen: boolean;
@@ -48,9 +50,38 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
   const [profileData, setProfileData] = useState(employee);
   const [photo, setPhoto] = useState<File | null>(null);
   const [managerName, setManagerName] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const isAdmin = true; // For demo purposes, assume admin
-  const { updateEmployee, employees } = useEmployees();
+  const { updateEmployee, employees, fetchEmployees } = useEmployees();
+  
+  
+  console.log('📊 ProfileData state:', {
+    id: profileData.id,
+    employeeId: profileData.employeeId,
+    name: profileData.name,
+    dateOfBirth: profileData.dateOfBirth,
+    dateOfJoining: profileData.dateOfJoining,
+    experienceYears: profileData.experienceYears,
+    email: profileData.email,
+    phone: profileData.phone
+  });
+
+  // Update profileData when employee prop changes
+  useEffect(() => {
+    setProfileData(employee);
+  }, [employee]);
+
+  // Update profileData when employees list changes (in case of updates from other components)
+  useEffect(() => {
+    const updatedEmployee = employees.find(emp => emp.id === employee.id);
+    if (updatedEmployee) {
+      setProfileData({
+        ...updatedEmployee,
+        photoUrl: updatedEmployee.photoUrl || ""
+      });
+    }
+  }, [employees, employee.id]);
 
   // Get unique departments and managers for dropdowns
   const departments = [...new Set(employees.map(emp => emp.department).filter(Boolean))];
@@ -83,18 +114,27 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setPhoto(file);
+      console.log("Photo file selected:", file.name, file.size, "bytes");
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsUpdating(true);
+    try {
+      let photoUrl = profileData.photoUrl;
       
-      // Create a FormData object to send the file
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', employee.name); // Required by backend
-      
-      try {
-        const response = await fetch(`http://localhost:8000/api/employees/upload-photo/${employee.id}`, {
+      // Upload photo if one is selected
+      if (photo) {
+        console.log("Uploading photo before updating employee...");
+        const formData = new FormData();
+        formData.append('file', photo);
+        formData.append('name', employee.name);
+        
+        const response = await authenticatedFetch(`http://localhost:8000/api/employees/upload-photo/${employee.id}`, {
           method: 'POST',
           body: formData,
         });
@@ -105,29 +145,14 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         }
         
         const data = await response.json();
-        // Update the photo URL with the one returned from server
-        setProfileData(prev => ({
-          ...prev,
-          photoUrl: data.photo_url
-        }));
+        console.log("Photo uploaded successfully:", data.photo_url);
+        photoUrl = data.photo_url;
         
-        toast({
-          title: "Success",
-          description: "Photo uploaded successfully",
-        });
-      } catch (error) {
-        console.error('Error uploading photo:', error);
-        toast({
-          title: "Error",
-          description: `Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          variant: "destructive"
-        });
+        // Clear the photo state since it's now uploaded
+        setPhoto(null);
       }
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
+      
+      // Update employee with all data including new photo URL
       const updatedEmployee = await updateEmployee(employee.id, {
         email: profileData.email,
         phone: profileData.phone,
@@ -135,7 +160,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         department: profileData.department,
         reporting_to: profileData.reporting_to,
         bio: profileData.bio,
-        photoUrl: profileData.photoUrl,
+        photoUrl: photoUrl,
         skills: profileData.skills,
         expertise: profileData.expertise,
         experienceYears: profileData.experienceYears,
@@ -146,6 +171,17 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
       });
       
       if (updatedEmployee) {
+        // Update local state with the complete updated employee data
+        setProfileData(prev => ({
+          ...prev,
+          ...updatedEmployee,
+          photoUrl: photoUrl
+        }));
+        
+        // Clear cache and refresh data
+        apiCache.clear();
+        await fetchEmployees();
+        
         setIsEditing(false);
         toast({
           title: "Success",
@@ -159,11 +195,14 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         description: "Failed to update profile",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleCancel = () => {
     setProfileData(employee); // Reset to original data
+    setPhoto(null); // Clear selected photo
     setIsEditing(false);
   };
 
@@ -177,7 +216,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         {/* Fixed Header Section */}
         <DialogHeader className="flex-shrink-0 border-b pb-4">
           <DialogTitle className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
+            <Avatar className="h-12 w-12" key={profileData.photoUrl}>
               <AvatarImage src={profileData.photoUrl} alt={profileData.name} />
               <AvatarFallback className="text-lg">
                 {profileData.name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -200,9 +239,18 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                       <X className="h-4 w-4" />
                       Cancel
                     </Button>
-                    <Button size="sm" className="gap-2" onClick={handleSubmit}>
-                      <Save className="h-4 w-4" />
-                      Save Changes
+                    <Button size="sm" className="gap-2" onClick={handleSubmit} disabled={isUpdating}>
+                      {isUpdating ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}
@@ -212,8 +260,17 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
         </DialogHeader>
 
         {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto relative">
+          {isUpdating && (
+            <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-lg border">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="text-sm font-medium">Updating profile...</span>
+              </div>
+            </div>
+          )}
           <div className="space-y-6 p-1">
+
           {/* Profile Picture Section */}
           {isEditing && (
             <Card>
@@ -225,28 +282,35 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <Avatar className="h-20 w-20 flex-shrink-0">
+                  <Avatar className="h-20 w-20 flex-shrink-0" key={`profile-${profileData.photoUrl}`}>
                     <AvatarImage src={profileData.photoUrl} alt={profileData.name} />
                     <AvatarFallback className="text-lg">
                       {profileData.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-3 flex-1 min-w-0">
+                  <div className="space-y-3 flex-1 min-w-0 overflow-hidden">
                     <div className="space-y-2">
                       <Label htmlFor="profile-picture" className="text-sm font-medium">
                         Choose Profile Picture
                       </Label>
-                      <Input
-                        id="profile-picture"
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="cursor-pointer file:cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors"
-                      />
+                      <div className="w-full">
+                        <Input
+                          id="profile-picture"
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="h-14 w-full cursor-pointer file:cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors file:min-w-fit file:whitespace-nowrap"
+                        />
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Upload a new profile picture (JPG, PNG, GIF). Maximum file size: 5MB
                     </p>
+                    {photo && (
+                      <p className="text-xs text-blue-600 font-medium">
+                        📷 Photo selected: {photo.name}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -395,7 +459,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                     id="dateOfBirth"
                     name="dateOfBirth"
                     type="date"
-                    value={profileData.dateOfBirth ? new Date(profileData.dateOfBirth).toISOString().split('T')[0] : ''} 
+                    value={profileData.dateOfBirth || ''} 
                     onChange={handleChange}
                     disabled={!isEditing}
                     className={!isEditing ? "bg-muted" : ""}
@@ -409,7 +473,7 @@ export function EmployeeProfile({ isOpen, onClose, employee }: EmployeeProfilePr
                     id="dateOfJoining"
                     name="dateOfJoining"
                     type="date"
-                    value={profileData.dateOfJoining ? new Date(profileData.dateOfJoining).toISOString().split('T')[0] : ''} 
+                    value={profileData.dateOfJoining || ''} 
                     onChange={handleChange}
                     disabled={!isEditing}
                     className={!isEditing ? "bg-muted" : ""}

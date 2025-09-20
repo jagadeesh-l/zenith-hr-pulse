@@ -67,6 +67,23 @@ async def login(user_data: UserLogin):
             detail="An error occurred during login"
         )
 
+@router.post("/refresh-token", response_model=Token)
+async def refresh_access_token(current_user = Depends(get_current_active_user)):
+    """Refresh access token for authenticated user"""
+    try:
+        # Create new token with extended expiration
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": current_user["username"]}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        logger.error(f"Error refreshing token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while refreshing token"
+        )
+
 @router.post("/msal-token", response_model=Token)
 async def exchange_msal_token(msal_token: str = Body(..., embed=True)):
     """Exchange MSAL token for backend JWT token"""

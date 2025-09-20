@@ -263,7 +263,6 @@ export function EmployeeOrgTree({ employees }: EmployeeOrgTreeProps) {
       setError(null);
     } catch (err) {
       setError('Failed to build tree structure');
-      console.error('Error building tree:', err);
     } finally {
       setLoading(false);
     }

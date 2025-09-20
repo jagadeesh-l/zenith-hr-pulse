@@ -87,7 +87,6 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
       setError(null);
     } catch (err) {
       setError('Failed to build hierarchy structure');
-      console.error('Error building hierarchy:', err);
     } finally {
       setLoading(false);
     }
@@ -143,7 +142,6 @@ export function EmployeeHierarchyFlowchart({ employees }: EmployeeHierarchyFlowc
 
     } catch (err) {
       setError('Failed to load children');
-      console.error('Error loading children:', err);
     } finally {
       setHierarchy(prev => 
         prev.map(updateNodeLoading(nodeId, false))

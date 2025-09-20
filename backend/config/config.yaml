@@ -36,7 +36,7 @@ server:
 security:
   secret_key: "your-secret-key-for-development-replace-in-production"
   algorithm: "HS256"
-  access_token_expire_minutes: 30
+  access_token_expire_minutes: 480  # 8 hours for development
 
 cors:
   allow_origins:

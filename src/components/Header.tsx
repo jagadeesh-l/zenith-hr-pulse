@@ -56,7 +56,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
         postLogoutRedirectUri: window.location.origin + '/'
       });
     } catch (error) {
-      console.error('Logout error:', error);
       // Fallback: just clear local state and navigate
       localStorage.removeItem('auth_token');
       navigate('/');
@@ -67,14 +66,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
     <header className={`sticky top-0 z-30 w-full transition-all duration-300 ${
       scrolled ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm' : 'bg-transparent'
     }`}>
-      <div className="container px-4 h-16 flex items-center justify-between">
+      <div className="container px-0 h-16 flex items-center justify-between">
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={onMenuToggle} className="mr-2 lg:hidden">
             <MenuIcon className="w-5 h-5" />
           </Button>
           
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gradient-primary mr-2">Zenith HR</h1>
+            <img 
+              src="/logo.png" 
+              alt="Info Services Logo" 
+              className="w-16 h-16 mr-3"
+            />
+            <h1 className="text-xl font-bold text-gradient-primary">Zenith</h1>
           </div>
         </div>
         
@@ -116,16 +120,16 @@ export function Header({ onMenuToggle }: HeaderProps) {
             
             <DropdownMenuContent 
               align="end" 
-              className="w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg"
+              className="min-w-56 max-w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg"
               sideOffset={8}
             >
               <DropdownMenuLabel className="flex items-center gap-3 px-3 py-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-hr-primary flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
                   {username.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-semibold text-sm">{username}</p>
-                  <p className="text-xs text-muted-foreground">{userEmail}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm truncate">{username}</p>
+                  <p className="text-xs text-muted-foreground break-all leading-relaxed">{userEmail}</p>
                 </div>
               </DropdownMenuLabel>
               

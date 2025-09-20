@@ -525,8 +525,7 @@ async def import_employees_csv(
                     "location": row.get("Location", ""),
                     "date_of_birth": dob.isoformat() if dob else None,
                     "date_of_joining": doj.isoformat() if doj else None,
-                    "profile_pic": row.get("ProfilePic", ""),
-                    "photo_url": row.get("ProfilePic", ""),  # Map ProfilePic to photo_url for compatibility
+                    "photo_url": row.get("ProfilePic", ""),  # Map ProfilePic to photo_url
                     "expertise": row.get("Expertise", ""),
                     "created_at": now.isoformat(),
                     "updated_at": now.isoformat()

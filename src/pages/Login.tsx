@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { getFirstAvailableModuleRoute } from "@/utils/navigation";
 import { useMsal } from "@azure/msal-react";
+import { apiCache, CACHE_KEYS } from "@/utils/api-cache";
 
 export default function Login() {
   const [loginClicked, setLoginClicked] = useState(false);
@@ -23,7 +24,6 @@ export default function Login() {
       // Fallback navigation after 5 seconds if video doesn't complete
       const fallbackTimer = setTimeout(() => {
         if (loginVideoRef.current) {
-          console.log("Fallback navigation triggered");
           const firstAvailableRoute = getFirstAvailableModuleRoute(featureFlagStatus);
           navigate(firstAvailableRoute);
         }
@@ -68,12 +68,9 @@ export default function Login() {
       throw new Error("Failed to fetch profile from Microsoft Graph");
     }
     const profile = await graphRes.json();
-    console.log("User Profile:", profile);
 
     // Exchange MSAL token for backend token
     try {
-      console.log("Attempting to exchange MSAL token for backend token...");
-      console.log("MSAL token (first 20 chars):", accessToken.substring(0, 20) + "...");
       
       const backendRes = await fetch("http://localhost:8000/api/auth/msal-token", {
         method: "POST",
@@ -83,32 +80,25 @@ export default function Login() {
         body: JSON.stringify({ msal_token: accessToken }),
       });
       
-      console.log("Backend response status:", backendRes.status);
-      console.log("Backend response headers:", Object.fromEntries(backendRes.headers.entries()));
       
       if (backendRes.ok) {
         const tokenData = await backendRes.json();
-        console.log("Token exchange response:", tokenData);
         
         // Store the backend token instead of MSAL token
         localStorage.setItem('auth_token', tokenData.access_token);
-        console.log("Backend token stored successfully:", tokenData.access_token.substring(0, 20) + "...");
         
         // Verify the token was stored correctly
         const storedToken = localStorage.getItem('auth_token');
-        console.log("Verification - stored token:", storedToken ? storedToken.substring(0, 20) + "..." : "No token found");
       } else {
         const errorText = await backendRes.text();
         console.error("Failed to get backend token:", backendRes.status, errorText);
         // Fallback: store MSAL token (will cause 401 errors)
         localStorage.setItem('auth_token', accessToken);
-        console.log("FALLBACK: Stored MSAL token instead");
       }
     } catch (error) {
       console.error("Error exchanging MSAL token:", error);
       // Fallback: store MSAL token (will cause 401 errors)
       localStorage.setItem('auth_token', accessToken);
-      console.log("FALLBACK: Stored MSAL token due to error");
     }
 
     // Wait a moment to ensure token is stored before proceeding
@@ -116,7 +106,141 @@ export default function Login() {
     
     // Verify token is still stored after the delay
     const finalToken = localStorage.getItem('auth_token');
-    console.log("Final verification - token still stored:", finalToken ? finalToken.substring(0, 20) + "..." : "No token found");
+
+    // Pre-fetch critical APIs BEFORE navigation to ensure data is available
+    const preFetchAPIs = async () => {
+      // Clear cache to ensure fresh data
+      apiCache.clear();
+      
+      const token = localStorage.getItem('auth_token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Create parallel API calls
+      const apiCalls = [
+        // Feature Flags API
+        fetch('http://localhost:8000/api/feature-flags/', { headers })
+          .then(async response => {
+            if (response.ok) {
+              const data = await response.json();
+              apiCache.set(CACHE_KEYS.FEATURE_FLAGS, data, 10 * 60 * 1000); // Cache for 10 minutes
+              return data;
+            } else {
+              console.warn("⚠️ Feature Flags API pre-fetch failed:", response.status);
+              return null;
+            }
+          })
+          .catch(error => {
+            console.warn("⚠️ Feature Flags API pre-fetch error:", error);
+            return null;
+          }),
+
+        // Employees API
+        fetch('http://localhost:8000/api/employees', { headers })
+          .then(async response => {
+            if (response.ok) {
+              const data = await response.json();
+              console.log("🔍 Pre-fetch Employees API response:", {
+                length: data.length,
+                firstEmployee: data[0] ? {
+                  id: data[0].id,
+                  employee_id: data[0].employee_id,
+                  name: data[0].name,
+                  date_of_birth: data[0].date_of_birth,
+                  date_of_joining: data[0].date_of_joining,
+                  experience_years: data[0].experience_years
+                } : null
+              });
+              
+              // Transform the data the same way useEmployees does
+              const transformedData = data.map((emp: any) => ({
+                id: emp.id || "temp-" + Math.random().toString(36).substr(2, 9),
+                employeeId: emp.employee_id || "",
+                name: emp.name || "Unknown",
+                position: emp.position || "Not specified",
+                department: emp.department || "Not specified",
+                photoUrl: emp.photo_url || "",
+                email: emp.email || "",
+                phone: emp.phone || "",
+                mobile: emp.mobile || "",
+                bio: emp.bio || "",
+                startDate: emp.start_date || "",
+                manager: emp.reporting_to || "",
+                reporting_to: emp.reporting_to || "",
+                skills: emp.skills || [],
+                expertise: emp.expertise || "",
+                experienceYears: emp.experience_years !== null ? emp.experience_years : undefined,
+                location: emp.location || "",
+                dateOfBirth: emp.date_of_birth || "",
+                dateOfJoining: emp.date_of_joining || "",
+                gender: emp.gender || ""
+              }));
+              
+              console.log("🔍 Transformed Employees data:", {
+                                length: transformedData.length,
+                firstEmployee: transformedData[0] ? {
+                  id: transformedData[0].id,
+                  employeeId: transformedData[0].employeeId,
+                  name: transformedData[0].name,
+                  dateOfBirth: transformedData[0].dateOfBirth,
+                  dateOfJoining: transformedData[0].dateOfJoining,
+                  experienceYears: transformedData[0].experienceYears
+                } : null
+              });
+              
+              // Cache the transformed data
+              apiCache.set(CACHE_KEYS.EMPLOYEES, transformedData, 5 * 60 * 1000);
+              return transformedData;
+            } else {
+              console.warn("⚠️ Employees API pre-fetch failed:", response.status);
+              return null;
+            }
+          })
+          .catch(error => {
+            console.warn("⚠️ Employees API pre-fetch error:", error);
+            return null;
+          }),
+
+        // Dashboard API
+        fetch('http://localhost:8000/api/employees-dashboard/', { headers })
+          .then(async response => {
+            if (response.ok) {
+              const data = await response.json();
+              apiCache.set(CACHE_KEYS.DASHBOARD, data, 5 * 60 * 1000); // Cache for 5 minutes
+              return data;
+            } else {
+              console.warn("⚠️ Dashboard API pre-fetch failed:", response.status);
+              return null;
+            }
+          })
+          .catch(error => {
+            console.warn("⚠️ Dashboard API pre-fetch error:", error);
+            return null;
+          })
+      ];
+
+      // Wait for all API calls to complete (or fail gracefully)
+      try {
+        const results = await Promise.allSettled(apiCalls);
+        console.log("🚀 Pre-fetch API Results:", {
+                    featureFlags: results[0].status === 'fulfilled' ? '✅' : '❌',
+          employees: results[1].status === 'fulfilled' ? '✅' : '❌',
+          dashboard: results[2].status === 'fulfilled' ? '✅' : '❌'
+        });
+        return results;
+      } catch (error) {
+        console.warn("⚠️ Some API pre-fetch calls failed:", error);
+        return null;
+      }
+    };
+
+    // Wait for API pre-fetching to complete before proceeding
+    await preFetchAPIs();
 
     // Trigger success transition and navigation/video
     setLoginClicked(true);
@@ -185,8 +309,8 @@ export default function Login() {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'auth_token') {
-        console.log("AUTH_TOKEN STORAGE EVENT:", {
-          oldValue: e.oldValue ? e.oldValue.substring(0, 20) + "..." : null,
+        console.log("🔑 Auth token changed:", {
+        oldValue: e.oldValue ? e.oldValue.substring(0, 20) + "..." : null,
           newValue: e.newValue ? e.newValue.substring(0, 20) + "..." : null,
           url: e.url
         });

@@ -27,7 +27,6 @@ class EmployeeBase(BaseModel):
     location: Optional[str] = None             # Location
     date_of_birth: Optional[date] = None       # Dob
     date_of_joining: Optional[date] = None     # Doj
-    profile_pic: Optional[str] = None          # ProfilePic URL
     
     # Legacy fields for backward compatibility
     bio: Optional[str] = None
@@ -69,7 +68,6 @@ class EmployeeUpdate(BaseModel):
     location: Optional[str] = None
     date_of_birth: Optional[date] = None
     date_of_joining: Optional[date] = None
-    profile_pic: Optional[str] = None
     
     # Legacy fields
     bio: Optional[str] = None

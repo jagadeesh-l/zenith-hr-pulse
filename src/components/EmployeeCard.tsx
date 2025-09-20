@@ -29,6 +29,7 @@ export type EmployeeCardProps = {
 export function EmployeeCard(props: EmployeeCardProps) {
   const [showProfile, setShowProfile] = useState(false);
   
+  
   // Generate avatar from name if no photo
   const getInitialsAvatar = (name: string) => {
     const initials = name.split(' ')
@@ -78,6 +79,9 @@ export function EmployeeCard(props: EmployeeCardProps) {
         <div className="p-3 text-center">
           <h3 className="font-medium text-sm">{props.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">{props.position}</p>
+          {props.employeeId && (
+            <p className="text-xs text-muted-foreground mt-1">ID: {props.employeeId}</p>
+          )}
         </div>
         
         {/* Hover Content */}
@@ -85,6 +89,9 @@ export function EmployeeCard(props: EmployeeCardProps) {
           <h3 className="font-bold">{props.name}</h3>
           <p className="text-sm opacity-90">{props.position}</p>
           <p className="text-sm opacity-90">{props.department}</p>
+          {props.employeeId && (
+            <p className="text-xs opacity-75">ID: {props.employeeId}</p>
+          )}
           <button 
             className="mt-3 px-4 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs"
             onClick={() => setShowProfile(true)}

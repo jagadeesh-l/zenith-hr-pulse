@@ -102,7 +102,6 @@ export const LeaveApplicationForm = ({ onCancel }: LeaveApplicationFormProps) =>
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // This would typically send the data to an API
-    console.log("Form values:", values);
     
     toast({
       title: "Leave application submitted",

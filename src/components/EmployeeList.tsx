@@ -15,6 +15,7 @@ import {
 
 type Employee = {
   id: string;
+  employeeId?: string;
   name: string;
   position: string;
   department: string;
@@ -46,7 +47,6 @@ export function EmployeeList({ employees, updateEmployee }: EmployeeListProps) {
   // Auto-save function when reporting_to changes
   const handleReportingToChange = async (employeeId: string, reportingToId: string) => {
     if (!updateEmployee) {
-      console.error('updateEmployee function not provided');
       return;
     }
 
@@ -56,7 +56,6 @@ export function EmployeeList({ employees, updateEmployee }: EmployeeListProps) {
       });
       setEditingEmployee(null);
     } catch (error) {
-      console.error('Error updating employee:', error);
     }
   };
 
@@ -66,6 +65,7 @@ export function EmployeeList({ employees, updateEmployee }: EmployeeListProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="">Employee ID</TableHead>
               <TableHead className="">Name</TableHead>
               <TableHead className="">Position</TableHead>
               <TableHead className="">Department</TableHead>
@@ -76,6 +76,9 @@ export function EmployeeList({ employees, updateEmployee }: EmployeeListProps) {
           <TableBody>
             {employees.map((employee) => (
               <TableRow key={employee.id}>
+                <TableCell className="font-medium">
+                  {employee.employeeId || 'N/A'}
+                </TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">

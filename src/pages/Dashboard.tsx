@@ -20,6 +20,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, ComposedChart } from 'recharts';
+import { apiCache, CACHE_KEYS } from "@/utils/api-cache";
 
 interface Employee {
   id: string;
@@ -84,6 +85,15 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Check cache first
+      const cachedData = apiCache.get(CACHE_KEYS.DASHBOARD);
+      if (cachedData) {
+        setDashboardData(cachedData);
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch('http://localhost:8000/api/employees-dashboard/');
       
       if (!response.ok) {
@@ -92,8 +102,10 @@ export default function Dashboard() {
       
       const data = await response.json();
       setDashboardData(data);
+      
+      // Cache the data
+      apiCache.set(CACHE_KEYS.DASHBOARD, data, 5 * 60 * 1000); // Cache for 5 minutes
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
     } finally {
       setLoading(false);

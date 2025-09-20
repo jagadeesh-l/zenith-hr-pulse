@@ -85,13 +85,6 @@ export default function Directory() {
     return true;
   });
 
-  // Debug logging
-  console.log('Directory component state:', {
-    employees: employees.length,
-    isLoading,
-    error,
-    filteredEmployees: filteredEmployees.length
-  });
   
   return (
     <div className="min-h-screen bg-background">
@@ -101,9 +94,12 @@ export default function Directory() {
       {/* Main Layout */}
       <div className="flex min-h-[calc(100vh-4rem)]">
         {/* Left Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-20 w-64 bg-background border-r border-border transform transition-transform duration-300 ease-in-out pt-16 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-0`}>
+        <aside 
+          className={`fixed inset-y-0 left-0 z-20 w-64 bg-background border-r border-border transform transition-transform duration-300 ease-in-out pt-16 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 lg:static lg:z-0`}
+          style={{ paddingTop: '0px' }}
+        >
           <SidebarContent 
             activeModule={activeModule} 
             onModuleChange={setActiveModule} 
@@ -248,12 +244,14 @@ export default function Directory() {
                 <>
                   {viewMode === "grid" && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                      {filteredEmployees.map((employee) => (
-                        <EmployeeCard
-                          key={employee.id}
-                          {...employee}
-                        />
-                      ))}
+                      {filteredEmployees.map((employee) => {
+                        return (
+                          <EmployeeCard
+                            key={employee.id}
+                            {...employee}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                   

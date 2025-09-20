@@ -78,7 +78,6 @@ class RecruitmentService {
         department_request: data,
         created_by: 'current_user' // This should come from auth context
       };
-      console.log('[DEBUG] Payload sent to backend:', payload);
       const response = await fetch(`${API_BASE_URL}/job-requisitions`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
